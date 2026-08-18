@@ -73,6 +73,7 @@ body {
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px; /* Visible horizontal scrollbar */
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-primary);
@@ -1113,8 +1114,9 @@ body {
 }
 
 .podium-card {
+  position: relative;
   width: 100%;
-  padding: 20px;
+  padding: 28px 20px 20px 20px;
   border-radius: 16px;
   margin-bottom: 12px;
   text-align: center;
@@ -1122,6 +1124,39 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+
+.rank-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: var(--font-tech);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  z-index: 10;
+}
+
+.rank-badge.gold {
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  color: var(--accent-gold);
+  text-shadow: 0 0 5px rgba(234, 179, 8, 0.3);
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.1);
+}
+
+.rank-badge.silver {
+  background: rgba(156, 163, 175, 0.15);
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  color: var(--accent-silver);
+}
+
+.rank-badge.bronze {
+  background: rgba(205, 127, 50, 0.15);
+  border: 1px solid rgba(205, 127, 50, 0.3);
+  color: var(--accent-bronze);
 }
 
 .podium-medal {
@@ -1245,6 +1280,8 @@ body {
 /* Rankings Table */
 .leaderboard-table-panel {
   padding: 24px;
+  min-width: 0;
+  overflow: hidden; /* Force container constraint so child tables scroll */
 }
 
 .leaderboard-table-panel h4 {
@@ -1256,6 +1293,8 @@ body {
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iOS */
+  padding-bottom: 6px;
 }
 
 .leaderboard-table {
@@ -1453,6 +1492,7 @@ body {
   }
   
   .podium-container {
+    display: flex;
     flex-direction: column;
     align-items: center;
     gap: 30px;
@@ -1462,6 +1502,18 @@ body {
     width: 100%;
     max-width: 320px;
   }
+
+  .first-place-col {
+    order: 1;
+  }
+
+  .second-place-col {
+    order: 2;
+  }
+
+  .third-place-col {
+    order: 3;
+  }
   
   .podium-block {
     display: none;
@@ -1469,5 +1521,102 @@ body {
 
   .scanner-leaderboards-section {
     grid-template-columns: 1fr;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-container {
+    padding: 0 12px;
+  }
+
+  .app-header {
+    padding: 16px 12px;
+    width: 100%;
+    margin-top: 12px;
+    margin-bottom: 12px; /* Pull active page content up */
+  }
+
+  .header-logo {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .header-logo h1 {
+    font-size: 18px;
+  }
+
+  .header-nav {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .nav-link {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .leaderboard-table th,
+  .leaderboard-table td {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  /* Tighten mobile vertical layout spacing */
+  .stats-grid {
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .leaderboard-section {
+    margin-bottom: 24px;
+  }
+  
+  .leaderboard-section h3 {
+    margin-top: 10px;
+    margin-bottom: 16px;
+  }
+  
+  .podium-container {
+    gap: 20px;
+    margin: 20px 0;
+  }
+  
+  .scanner-leaderboards-section {
+    margin-top: 24px;
+    gap: 16px;
+  }
+  
+  .admin-controls-panel {
+    margin-top: 16px !important;
+    padding: 20px;
+  }
+
+  /* Compact panels on mobile to fit narrow screens */
+  .glass-panel {
+    padding: 16px !important;
+  }
+
+  /* Stack QR scan fields vertically so they fit without horizontal overflow */
+  .scan-selector-row,
+  .scan-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .scan-select,
+  .scan-text-input,
+  .scan-selector-row .btn,
+  .scan-input-row .btn {
+    width: 100% !important;
+    flex: none !important;
   }
 }

@@ -207,6 +207,7 @@ export default function AdminPage({ teams, visitors, faculty, scans }) {
               <div className="podium-column second-place-col">
                 {secondPlace ? (
                   <div className="podium-card glass-panel silver-glow fade-in-podium">
+                    <div className="rank-badge silver">#2</div>
                     <span className="podium-medal">🥈</span>
                     <span className="podium-rank-text">2ND PLACE</span>
                     <h4 className="podium-team-name">{secondPlace.name}</h4>
@@ -229,6 +230,7 @@ export default function AdminPage({ teams, visitors, faculty, scans }) {
               <div className="podium-column first-place-col">
                 {firstPlace ? (
                   <div className="podium-card glass-panel gold-glow fade-in-podium">
+                    <div className="rank-badge gold">#1</div>
                     <span className="podium-medal crown-animation">👑</span>
                     <span className="podium-rank-text gold-text">1ST PLACE</span>
                     <h4 className="podium-team-name">{firstPlace.name}</h4>
@@ -251,6 +253,7 @@ export default function AdminPage({ teams, visitors, faculty, scans }) {
               <div className="podium-column third-place-col">
                 {thirdPlace ? (
                   <div className="podium-card glass-panel bronze-glow fade-in-podium">
+                    <div className="rank-badge bronze">#3</div>
                     <span className="podium-medal">🥉</span>
                     <span className="podium-rank-text">3RD PLACE</span>
                     <h4 className="podium-team-name">{thirdPlace.name}</h4>

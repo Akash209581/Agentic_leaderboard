@@ -75,7 +75,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="app-footer">
-        <p>© 2026 AI Hackathon Registration & QR Points Engine. Designed with Rich Aesthetics.</p>
+        <p>© 2026 Neuraltrix AI Private Limited. All rights reserved.</p>
       </footer>
     </div>
   );
