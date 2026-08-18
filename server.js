@@ -144,30 +144,43 @@ app.get('/api/data', async (req, res) => {
     const faculty = await dbAll('SELECT * FROM faculty');
     const scans = await dbAll('SELECT * FROM scans');
 
-    // Parse team members JSON string to array and parse bigint numbers
+    // Map database snake_case columns to React camelCase keys
     const parsedTeams = teams.map(t => ({
-      ...t,
+      id: t.id,
+      name: t.name,
+      leaderName: t.leader_name,
+      leaderRegNo: t.leader_reg_no,
+      memberCount: parseInt(t.member_count || 0, 10),
       members: JSON.parse(t.members || '[]'),
       points: parseInt(t.points || 0, 10),
-      registered_at: parseInt(t.registered_at || 0, 10)
+      registeredAt: parseInt(t.registered_at || 0, 10)
     }));
 
     const parsedVisitors = visitors.map(v => ({
-      ...v,
+      id: v.id,
+      name: v.name,
+      mobile: v.mobile,
       points: parseInt(v.points || 0, 10),
-      registered_at: parseInt(v.registered_at || 0, 10)
+      registeredAt: parseInt(v.registered_at || 0, 10)
     }));
 
     const parsedFaculty = faculty.map(f => ({
-      ...f,
+      id: f.id,
+      name: f.name,
       points: parseInt(f.points || 0, 10),
-      registered_at: parseInt(f.registered_at || 0, 10)
+      registeredAt: parseInt(f.registered_at || 0, 10)
     }));
 
     const parsedScans = scans.map(s => ({
-      ...s,
+      id: s.id,
+      teamId: s.team_id,
+      scannerId: s.scanner_id,
+      scannerName: s.scanner_name,
+      scannerType: s.scanner_type,
+      code: s.code,
+      status: s.status,
       timestamp: parseInt(s.timestamp || 0, 10),
-      approved_at: parseInt(s.approved_at || 0, 10)
+      approvedAt: parseInt(s.approved_at || 0, 10)
     }));
 
     res.json({
