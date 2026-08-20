@@ -18,9 +18,24 @@ app.use(express.json());
 
 // Initialize PostgreSQL connection pool
 const connectionString = process.env.DATABASE_URL;
+
+let sslOption = false;
+if (process.env.DB_SSL === 'true') {
+  sslOption = { rejectUnauthorized: false };
+} else if (process.env.DB_SSL === 'false') {
+  sslOption = false;
+} else if (connectionString) {
+  const lowerUrl = connectionString.toLowerCase();
+  if (lowerUrl.includes('sslmode=disable') || lowerUrl.includes('ssl=false') || lowerUrl.includes('localhost') || lowerUrl.includes('127.0.0.1')) {
+    sslOption = false;
+  } else if (lowerUrl.includes('supabase') || lowerUrl.includes('sslmode=require') || lowerUrl.includes('ssl=true') || lowerUrl.includes('pgbouncer=true')) {
+    sslOption = { rejectUnauthorized: false };
+  }
+}
+
 const pool = new Pool({
   connectionString,
-  ssl: connectionString ? { rejectUnauthorized: false } : false
+  ssl: sslOption
 });
 
 // Prevent Node process crash on idle client errors (common with Supabase / PgBouncer)
@@ -603,7 +618,7 @@ app.use('/leaderboard', express.static(join(__dirname, 'dist')));
 app.use(express.static(join(__dirname, 'dist')));
 
 // Redirect all other queries to index.html for SPA router
-app.get('/leaderboard/*', (req, res) => {
+app.get('/leaderboard/*splat', (req, res) => {
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 app.get('*splat', (req, res) => {
