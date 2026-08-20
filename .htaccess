@@ -1,4 +1,5 @@
 RewriteEngine On
+RewriteBase /leaderboard/
 
 # Route all backend API requests to api.php
 RewriteCond %{REQUEST_FILENAME} !-f

@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 6009;
 
 app.use(cors());
 app.use(express.json());
@@ -589,9 +589,13 @@ app.post('/api/reset', async (req, res) => {
 });
 
 // Serve static frontend assets in production
+app.use('/leaderboard', express.static(join(__dirname, 'dist')));
 app.use(express.static(join(__dirname, 'dist')));
 
 // Redirect all other queries to index.html for SPA router
+app.get('/leaderboard/*', (req, res) => {
+  res.sendFile(join(__dirname, 'dist', 'index.html'));
+});
 app.get('*splat', (req, res) => {
   if (!req.path.startsWith('/api')) {
     res.sendFile(join(__dirname, 'dist', 'index.html'));
