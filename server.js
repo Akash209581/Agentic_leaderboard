@@ -82,8 +82,44 @@ const dbGet = async (query, params = []) => {
   return res.rows[0] || null;
 };
 
+// Helper to ensure target database exists in PostgreSQL
+const ensureDatabaseExists = async () => {
+  if (!connectionString) return;
+  try {
+    const parsed = new URL(connectionString);
+    const dbName = parsed.pathname.replace(/^\//, '');
+    if (!dbName || dbName === 'postgres') return;
+
+    const defaultUrl = new URL(connectionString);
+    defaultUrl.pathname = '/postgres';
+
+    const tempPool = new Pool({
+      connectionString: defaultUrl.toString(),
+      ssl: sslOption
+    });
+
+    try {
+      const checkRes = await tempPool.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
+      if (checkRes.rows.length === 0) {
+        console.log(`Database "${dbName}" does not exist. Creating database "${dbName}"...`);
+        const safeDbName = dbName.replace(/"/g, '""');
+        await tempPool.query(`CREATE DATABASE "${safeDbName}"`);
+        console.log(`Database "${dbName}" created successfully.`);
+      }
+    } catch (err) {
+      console.warn(`Auto-creation check for database "${dbName}":`, err.message);
+    } finally {
+      await tempPool.end();
+    }
+  } catch (err) {
+    // Ignore URL parsing errors
+  }
+};
+
 // Create tables
 const initDb = async () => {
+  await ensureDatabaseExists();
+
   await dbRun(`
     CREATE TABLE IF NOT EXISTS teams (
       id TEXT PRIMARY KEY,
