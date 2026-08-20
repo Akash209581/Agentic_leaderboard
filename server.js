@@ -23,6 +23,11 @@ const pool = new Pool({
   ssl: connectionString ? { rejectUnauthorized: false } : false
 });
 
+// Prevent Node process crash on idle client errors (common with Supabase / PgBouncer)
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle PostgreSQL client:', err);
+});
+
 pool.connect((err, client, release) => {
   if (err) {
     console.error('Error connecting to the PostgreSQL database:', err.message);
@@ -135,6 +140,11 @@ const generateUniqueOTP = async () => {
 };
 
 // --- API ENDPOINTS ---
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', port, timestamp: new Date().toISOString() });
+});
 
 // Fetch all database state for syncing
 app.get('/api/data', async (req, res) => {
@@ -603,6 +613,6 @@ app.get('*splat', (req, res) => {
 });
 
 // Start Server
-app.listen(port, () => {
-  console.log(`Backend server running on http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Backend server running on http://0.0.0.0:${port}`);
 });
