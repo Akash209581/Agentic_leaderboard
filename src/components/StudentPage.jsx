@@ -670,103 +670,153 @@ export default function StudentPage({ teams, scans, events = [] }) {
         </div>
       )}
 
-      <div className="dashboard-grid">
-        {/* Left column: Team Profile */}
-        <div className="grid-col-left">
-          <div className="glass-panel profile-panel">
-            <div className="profile-header" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+      <div className="student-dashboard-container">
+        {/* Left Column: Team Profile & Points */}
+        <div className="dashboard-sidebar-card glass-panel">
+          <div className="profile-hero-section">
+            <div className="profile-photo-wrapper">
               <img
-                src={currentTeam.leaderPhoto || currentTeam.leader_photo || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"}
+                src={currentTeam.leaderPhoto || currentTeam.leader_photo || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"}
                 alt="Leader"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '2px solid var(--accent-tech)'
-                }}
+                className="profile-leader-img"
               />
-              <div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                  <span className="team-id-badge">{currentTeam.id}</span>
-                  {currentTeam.event && <span className="accent-badge" style={{ background: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-tech)', border: '1px solid rgba(6, 182, 212, 0.3)' }}>{currentTeam.event}</span>}
+              <span className="leader-crown-badge">👑</span>
+            </div>
+
+            <div className="profile-info-block">
+              <div className="profile-badges-row">
+                <span className="badge-team-id">{currentTeam.id}</span>
+                {currentTeam.event && <span className="badge-event-tag">{currentTeam.event}</span>}
+              </div>
+              <h2 className="profile-team-name">{currentTeam.name}</h2>
+            </div>
+          </div>
+
+          {/* Glowing Points Banner */}
+          <div className="points-display-banner">
+            <div className="points-banner-glow"></div>
+            <div className="points-banner-content">
+              <span className="points-banner-title">⚡ TOTAL POINTS EARNED</span>
+              <div className="points-banner-num-row">
+                <span className="points-big-num">{currentTeam.points || 0}</span>
+                <span className="points-unit-tag">PTS</span>
+              </div>
+              <span className="points-live-status">● Live Real-Time Standings</span>
+            </div>
+          </div>
+
+          {/* Members List */}
+          <div className="team-members-block">
+            <div className="members-block-header">
+              <span>👥 Squad Members</span>
+              <span className="members-count-pill">{currentTeam.members?.length || 0} Members</span>
+            </div>
+            <div className="members-pill-list">
+              {currentTeam.members?.map((name, idx) => (
+                <div key={idx} className="member-pill-tile">
+                  <div className="member-pill-avatar">
+                    {idx === 0 ? '👑' : '👤'}
+                  </div>
+                  <span className="member-pill-name">{name}</span>
+                  {idx === 0 ? (
+                    <span className="member-role-badge leader">Leader</span>
+                  ) : (
+                    <span className="member-role-badge member">Member</span>
+                  )}
                 </div>
-                <h2>{currentTeam.name}</h2>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={handleLogout} className="btn-logout-pill">
+            <span>🔒</span>
+            <span>Logout Team</span>
+          </button>
+        </div>
+
+        {/* Right Column: QR Code Card & Scan History Card */}
+        <div className="dashboard-main-content">
+          {/* QR Code Presentation Card */}
+          <div className="qr-presentation-card glass-panel">
+            <div className="panel-header-inline">
+              <div className="panel-header-icon-box">
+                <span>📱</span>
+              </div>
+              <div>
+                <h3>Your Official Team QR Code</h3>
+                <p>Present this QR code to visiting students & faculty to claim score points.</p>
               </div>
             </div>
 
-            <div className="points-display-card">
-              <span className="points-title">TOTAL POINTS</span>
-              <span className="points-value glow-text">{currentTeam.points}</span>
-            </div>
-
-            <div className="members-list-card">
-              <h4>Team Members ({currentTeam.members.length})</h4>
-              <ul>
-                {currentTeam.members.map((name, idx) => (
-                  <li key={idx} className="member-item">
-                    <span className="bullet"></span>
-                    {name} {idx === 0 && <span className="leader-tag">(Leader)</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <button onClick={handleLogout} className="btn btn-outline btn-block logout-btn">
-              Logout
-            </button>
-          </div>
-        </div>
-
-        {/* Right column: QR and History */}
-        <div className="grid-col-right">
-          {/* QR Code Panel */}
-          <div className="glass-panel qr-panel">
-            <div className="panel-header">
-              <h3>Your Unique QR Code</h3>
-              <p>Show this QR code to student visitors and faculty members to earn points.</p>
-            </div>
-            
-            <div className="qr-container-wrapper">
-              <div className="qr-card">
+            <div className="qr-interactive-stage">
+              <div className="qr-frame-box">
                 {qrCodeUrl ? (
-                  <img src={qrCodeUrl} alt={`QR Code for ${currentTeam.id}`} className="qr-image" />
+                  <img src={qrCodeUrl} alt={`QR Code for ${currentTeam.id}`} className="qr-stage-image" />
                 ) : (
-                  <div className="qr-placeholder">Generating QR...</div>
+                  <div className="qr-placeholder-box">Generating QR...</div>
                 )}
-                <div className="qr-footer-id">{currentTeam.id}</div>
+                <div className="qr-stage-badge">
+                  <span>🏷️</span>
+                  <span>ID: <strong>{currentTeam.id}</strong></span>
+                </div>
+              </div>
+
+              <div className="qr-instructions-box">
+                <h4>How Points Work:</h4>
+                <div className="instruction-step">
+                  <span className="step-num">1</span>
+                  <span>Visitor or Faculty scans your QR using their phone camera.</span>
+                </div>
+                <div className="instruction-step">
+                  <span className="step-num">2</span>
+                  <span>A popup appears on this screen asking for a 4-digit code.</span>
+                </div>
+                <div className="instruction-step">
+                  <span className="step-num">3</span>
+                  <span>Enter the code on their screen to instantly earn <strong>+10 points</strong>!</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* History Panel */}
-          <div className="glass-panel history-panel">
-            <div className="panel-header">
-              <h3>Scan History</h3>
-              <p>Recent scan approvals from student visitors and faculty.</p>
+          <div className="scan-history-card glass-panel">
+            <div className="panel-header-inline">
+              <div className="panel-header-icon-box history">
+                <span>📜</span>
+              </div>
+              <div>
+                <h3>Live Scan Approvals & Audit Feed</h3>
+                <p>Real-time log of verified scans approved by your team.</p>
+              </div>
             </div>
 
-            <div className="history-list">
+            <div className="scan-history-feed">
               {myScanHistory.length === 0 ? (
-                <div className="empty-state">
-                  <p>No scans approved yet. Find student visitors or faculty to scan your QR!</p>
+                <div className="empty-history-state">
+                  <div className="empty-icon-circle">📡</div>
+                  <h4>No Scans Yet</h4>
+                  <p>Invite visitors and faculty to scan your team's QR code!</p>
                 </div>
               ) : (
                 myScanHistory.map((scan) => (
-                  <div key={scan.id} className="history-item fade-in-list">
-                    <div className="history-info">
-                      <div className="history-title-row">
-                        <span className="scanner-name">{scan.scannerName}</span>
-                        <span className={`scanner-badge ${scan.scannerType}`}>
-                          {scan.scannerType === 'visitor' ? 'STUDENT' : scan.scannerType.toUpperCase()}
+                  <div key={scan.id} className="scan-feed-item fade-in-list">
+                    <div className="scan-feed-avatar">
+                      {scan.scannerType === 'visitor' ? '🎟️' : '🎓'}
+                    </div>
+                    <div className="scan-feed-details">
+                      <div className="scan-feed-top-row">
+                        <span className="scanner-name-text">{scan.scannerName}</span>
+                        <span className={`scanner-type-pill ${scan.scannerType}`}>
+                          {scan.scannerType === 'visitor' ? 'STUDENT VISITOR' : 'FACULTY'}
                         </span>
                       </div>
-                      <span className="history-time">
-                        {new Date(scan.approvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      <span className="scan-timestamp-text">
+                        🕒 {new Date(scan.approvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • Verified
                       </span>
                     </div>
-                    <div className="history-points">
-                      +10 pts
+                    <div className="scan-points-badge">
+                      +10 PTS
                     </div>
                   </div>
                 ))
