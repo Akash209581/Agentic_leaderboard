@@ -24,6 +24,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const [visName, setVisName] = useState('');
   const [visMobile, setVisMobile] = useState('');
   const [visPassword, setVisPassword] = useState('');
+  const [showVisPassword, setShowVisPassword] = useState(false);
   const [visIsRegistering, setVisIsRegistering] = useState(false);
   const [visError, setVisError] = useState('');
 
@@ -32,6 +33,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const [facName, setFacName] = useState('');
   const [facPassword, setFacPassword] = useState('');
   const [facConfirmPassword, setFacConfirmPassword] = useState('');
+  const [showFacPassword, setShowFacPassword] = useState(false);
   const [facIsRegistering, setFacIsRegistering] = useState(false);
   const [facError, setFacError] = useState('');
 
@@ -268,27 +270,36 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   if (!currentUser) {
     return (
       <div className="fade-in">
-        {/* Sub-tab navigation */}
-        <div className="tab-navigation">
-          <button 
-            className={`tab-btn ${userRole === 'visitor' ? 'active' : ''}`}
-            onClick={() => setUserRole('visitor')}
-          >
-            Student Visitor
-          </button>
-          <button 
-            className={`tab-btn ${userRole === 'faculty' ? 'active' : ''}`}
-            onClick={() => setUserRole('faculty')}
-          >
-            Faculty Portal
-          </button>
+        {/* Modern Floating Segmented Sub-Tabs */}
+        <div className="segmented-tabs-wrapper">
+          <div className="segmented-tab-container">
+            <button 
+              type="button"
+              className={`segmented-tab-btn ${userRole === 'visitor' ? 'active' : ''}`}
+              onClick={() => setUserRole('visitor')}
+            >
+              <span className="seg-tab-icon">🎟️</span>
+              <span>Student Visitor</span>
+            </button>
+            <button 
+              type="button"
+              className={`segmented-tab-btn ${userRole === 'faculty' ? 'active' : ''}`}
+              onClick={() => setUserRole('faculty')}
+            >
+              <span className="seg-tab-icon">🎓</span>
+              <span>Faculty Portal</span>
+            </button>
+          </div>
         </div>
 
         {/* Student Visitor Portal */}
         {userRole === 'visitor' && (
           <div className="glass-panel registration-box fade-in-tab">
+            <div className="card-top-icon-circle">
+              <span>👤🪪</span>
+            </div>
             <div className="panel-header">
-              <span className="accent-badge">STUDENT VISITOR SIGN-IN</span>
+              <span className="accent-badge-pill">— STUDENT VISITOR SIGN-IN —</span>
               <h2>Student Visitor Dashboard</h2>
               <p>Log in or sign up to scan student team QR codes and earn points.</p>
             </div>
@@ -297,91 +308,140 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
             {visIsRegistering ? (
               <form onSubmit={handleVisitorRegister} className="registration-form">
-                <div className="form-group">
-                  <label htmlFor="visName">Full Name</label>
-                  <input
-                    id="visName"
-                    type="text"
-                    value={visName}
-                    onChange={(e) => setVisName(e.target.value)}
-                    placeholder="Enter your full name..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">👤</div>
+                  <div className="typebox-content">
+                    <label htmlFor="visName" className="typebox-label">Full Name</label>
+                    <input
+                      id="visName"
+                      type="text"
+                      value={visName}
+                      onChange={(e) => setVisName(e.target.value)}
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="visMobile">Mobile Number</label>
-                  <input
-                    id="visMobile"
-                    type="tel"
-                    maxLength="10"
-                    value={visMobile}
-                    onChange={(e) => setVisMobile(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Enter 10-digit mobile number..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">📱</div>
+                  <div className="typebox-content">
+                    <label htmlFor="visMobile" className="typebox-label">Mobile Number</label>
+                    <input
+                      id="visMobile"
+                      type="tel"
+                      maxLength="10"
+                      value={visMobile}
+                      onChange={(e) => setVisMobile(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter 10-digit mobile number"
+                      required
+                    />
+                  </div>
+                  <div className="typebox-right-icon">🪪</div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="visPassword">Password</label>
-                  <input
-                    id="visPassword"
-                    type="password"
-                    value={visPassword}
-                    onChange={(e) => setVisPassword(e.target.value)}
-                    placeholder="Create a password..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">🔒</div>
+                  <div className="typebox-content">
+                    <label htmlFor="visPassword" className="typebox-label">Password</label>
+                    <input
+                      id="visPassword"
+                      type={showVisPassword ? 'text' : 'password'}
+                      value={visPassword}
+                      onChange={(e) => setVisPassword(e.target.value)}
+                      placeholder="Create a secure password"
+                      required
+                    />
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowVisPassword(!showVisPassword)} 
+                    className="typebox-right-btn"
+                    title="Toggle password visibility"
+                  >
+                    {showVisPassword ? '🙈' : '👁️'}
+                  </button>
                 </div>
 
-                <button type="submit" className="btn btn-primary btn-block">
-                  Register Visitor
+                <button type="submit" className="btn btn-pill-action btn-block">
+                  <span className="btn-icon-sq">✨</span>
+                  <span className="btn-text-main">Create Visitor Account</span>
+                  <span className="btn-arrow-right">→</span>
                 </button>
 
-                <p className="toggle-auth-link">
-                  Already registered?{' '}
-                  <button type="button" onClick={() => setVisIsRegistering(false)}>
-                    Sign In Here
+                <div className="card-divider-text">
+                  <span>Already registered?</span>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setVisIsRegistering(false)}
+                    className="link-create-account"
+                  >
+                    Sign In Here →
                   </button>
-                </p>
+                </div>
               </form>
             ) : (
               <form onSubmit={handleVisitorLogin} className="registration-form">
-                <div className="form-group">
-                  <label htmlFor="visMobileLogin">Mobile Number</label>
-                  <input
-                    id="visMobileLogin"
-                    type="tel"
-                    maxLength="10"
-                    value={visMobile}
-                    onChange={(e) => setVisMobile(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Enter registered mobile number..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">📱</div>
+                  <div className="typebox-content">
+                    <label htmlFor="visMobileLogin" className="typebox-label">Mobile Number</label>
+                    <input
+                      id="visMobileLogin"
+                      type="tel"
+                      maxLength="10"
+                      value={visMobile}
+                      onChange={(e) => setVisMobile(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter registered mobile number"
+                      required
+                    />
+                  </div>
+                  <div className="typebox-right-icon">🪪</div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="visPasswordLogin">Password</label>
-                  <input
-                    id="visPasswordLogin"
-                    type="password"
-                    value={visPassword}
-                    onChange={(e) => setVisPassword(e.target.value)}
-                    placeholder="Enter your password..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">🔒</div>
+                  <div className="typebox-content">
+                    <label htmlFor="visPasswordLogin" className="typebox-label">Password</label>
+                    <input
+                      id="visPasswordLogin"
+                      type={showVisPassword ? 'text' : 'password'}
+                      value={visPassword}
+                      onChange={(e) => setVisPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowVisPassword(!showVisPassword)} 
+                    className="typebox-right-btn"
+                    title="Toggle password visibility"
+                  >
+                    {showVisPassword ? '🙈' : '👁️'}
+                  </button>
                 </div>
 
-                <button type="submit" className="btn btn-primary btn-block">
-                  Login & Start Scanning
+                <button type="submit" className="btn btn-pill-action btn-block">
+                  <span className="btn-icon-sq">📷</span>
+                  <span className="btn-text-main">Login & Start Scanning</span>
+                  <span className="btn-arrow-right">→</span>
                 </button>
 
-                <p className="toggle-auth-link">
-                  New visitor student?{' '}
-                  <button type="button" onClick={() => setVisIsRegistering(true)}>
-                    Create Account Here
+                <div className="card-divider-text">
+                  <span>New visitor student?</span>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setVisIsRegistering(true)}
+                    className="link-create-account"
+                  >
+                    Create Account Here →
                   </button>
-                </p>
+                </div>
               </form>
             )}
           </div>
@@ -390,8 +450,11 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
         {/* Faculty Portal */}
         {userRole === 'faculty' && (
           <div className="glass-panel registration-box fade-in-tab">
+            <div className="card-top-icon-circle">
+              <span>🎓</span>
+            </div>
             <div className="panel-header">
-              <span className="accent-badge">FACULTY PORTAL</span>
+              <span className="accent-badge-pill">— FACULTY PORTAL —</span>
               <h2>{facIsRegistering ? 'Faculty Account Creation' : 'Faculty Sign-In'}</h2>
               <p>Access scanner to validate student hackathon team QR codes and distribute points.</p>
             </div>
@@ -400,101 +463,149 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
             {facIsRegistering ? (
               <form onSubmit={handleFacultyRegister} className="registration-form">
-                <div className="form-group">
-                  <label htmlFor="facId">Faculty ID (Unique)</label>
-                  <input
-                    id="facId"
-                    type="text"
-                    value={facId}
-                    onChange={(e) => setFacId(e.target.value)}
-                    placeholder="Enter Faculty ID..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">🪪</div>
+                  <div className="typebox-content">
+                    <label htmlFor="facId" className="typebox-label">Faculty ID (Unique)</label>
+                    <input
+                      id="facId"
+                      type="text"
+                      value={facId}
+                      onChange={(e) => setFacId(e.target.value)}
+                      placeholder="Enter Faculty ID"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="facName">Full Name</label>
-                  <input
-                    id="facName"
-                    type="text"
-                    value={facName}
-                    onChange={(e) => setFacName(e.target.value)}
-                    placeholder="Enter your name..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">👤</div>
+                  <div className="typebox-content">
+                    <label htmlFor="facName" className="typebox-label">Full Name</label>
+                    <input
+                      id="facName"
+                      type="text"
+                      value={facName}
+                      onChange={(e) => setFacName(e.target.value)}
+                      placeholder="Enter full name"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="facPassword">Password</label>
-                  <input
-                    id="facPassword"
-                    type="password"
-                    value={facPassword}
-                    onChange={(e) => setFacPassword(e.target.value)}
-                    placeholder="Create a password..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">🔒</div>
+                  <div className="typebox-content">
+                    <label htmlFor="facPassword" className="typebox-label">Password</label>
+                    <input
+                      id="facPassword"
+                      type={showFacPassword ? 'text' : 'password'}
+                      value={facPassword}
+                      onChange={(e) => setFacPassword(e.target.value)}
+                      placeholder="Create password"
+                      required
+                    />
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowFacPassword(!showFacPassword)} 
+                    className="typebox-right-btn"
+                  >
+                    {showFacPassword ? '🙈' : '👁️'}
+                  </button>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="facConfirmPassword">Confirm Password</label>
-                  <input
-                    id="facConfirmPassword"
-                    type="password"
-                    value={facConfirmPassword}
-                    onChange={(e) => setFacConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">🔒</div>
+                  <div className="typebox-content">
+                    <label htmlFor="facConfirmPassword" className="typebox-label">Confirm Password</label>
+                    <input
+                      id="facConfirmPassword"
+                      type={showFacPassword ? 'text' : 'password'}
+                      value={facConfirmPassword}
+                      onChange={(e) => setFacConfirmPassword(e.target.value)}
+                      placeholder="Confirm password"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <button type="submit" className="btn btn-primary btn-block">
-                  Register Faculty
+                <button type="submit" className="btn btn-pill-action btn-block">
+                  <span className="btn-icon-sq">🎓</span>
+                  <span className="btn-text-main">Register Faculty</span>
+                  <span className="btn-arrow-right">→</span>
                 </button>
 
-                <p className="toggle-auth-link">
-                  Already have an account?{' '}
-                  <button type="button" onClick={() => setFacIsRegistering(false)}>
-                    Sign In
+                <div className="card-divider-text">
+                  <span>Already registered?</span>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setFacIsRegistering(false)}
+                    className="link-create-account"
+                  >
+                    Sign In Here →
                   </button>
-                </p>
+                </div>
               </form>
             ) : (
               <form onSubmit={handleFacultyLogin} className="registration-form">
-                <div className="form-group">
-                  <label htmlFor="facIdLogin">Faculty ID</label>
-                  <input
-                    id="facIdLogin"
-                    type="text"
-                    value={facId}
-                    onChange={(e) => setFacId(e.target.value)}
-                    placeholder="Enter Faculty ID..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">🪪</div>
+                  <div className="typebox-content">
+                    <label htmlFor="facIdLogin" className="typebox-label">Faculty ID</label>
+                    <input
+                      id="facIdLogin"
+                      type="text"
+                      value={facId}
+                      onChange={(e) => setFacId(e.target.value)}
+                      placeholder="Enter Faculty ID"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="facPasswordLogin">Password</label>
-                  <input
-                    id="facPasswordLogin"
-                    type="password"
-                    value={facPassword}
-                    onChange={(e) => setFacPassword(e.target.value)}
-                    placeholder="Enter password..."
-                    required
-                  />
+                <div className="pill-typebox-wrapper">
+                  <div className="typebox-left-icon">🔒</div>
+                  <div className="typebox-content">
+                    <label htmlFor="facPasswordLogin" className="typebox-label">Password</label>
+                    <input
+                      id="facPasswordLogin"
+                      type={showFacPassword ? 'text' : 'password'}
+                      value={facPassword}
+                      onChange={(e) => setFacPassword(e.target.value)}
+                      placeholder="Enter password"
+                      required
+                    />
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowFacPassword(!showFacPassword)} 
+                    className="typebox-right-btn"
+                  >
+                    {showFacPassword ? '🙈' : '👁️'}
+                  </button>
                 </div>
 
-                <button type="submit" className="btn btn-primary btn-block">
-                  Sign In
+                <button type="submit" className="btn btn-pill-action btn-block">
+                  <span className="btn-icon-sq">📷</span>
+                  <span className="btn-text-main">Login & Start Evaluation</span>
+                  <span className="btn-arrow-right">→</span>
                 </button>
 
-                <p className="toggle-auth-link">
-                  Need a faculty account?{' '}
-                  <button type="button" onClick={() => setFacIsRegistering(true)}>
-                    Register Here
+                <div className="card-divider-text">
+                  <span>New faculty member?</span>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setFacIsRegistering(true)}
+                    className="link-create-account"
+                  >
+                    Register Faculty Account →
                   </button>
-                </p>
+                </div>
               </form>
             )}
           </div>
@@ -567,7 +678,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
             </div>
             <div className="modal-body">
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
-                HackForce requires access to your device camera to scan student registration QR codes and process scan validation.
+                Agentic AI Day requires access to your device camera to scan student registration QR codes and process scan validation.
               </p>
               <div className="modal-actions">
                 <button 

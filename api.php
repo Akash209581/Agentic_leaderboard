@@ -60,10 +60,7 @@ $pdo->exec("
 $count = $pdo->query("SELECT COUNT(*) as count FROM events")->fetch()['count'];
 if ($count == 0) {
     $defaultEvents = [
-        ['E-1', 'Web Development', round(microtime(true) * 1000)],
-        ['E-2', 'AI/ML Hackathon', round(microtime(true) * 1000)],
-        ['E-3', 'Cybersecurity CTF', round(microtime(true) * 1000)],
-        ['E-4', 'App Development', round(microtime(true) * 1000)]
+        ['E-1', 'Agentic Ai Day', round(microtime(true) * 1000)]
     ];
     $ins = $pdo->prepare("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)");
     foreach ($defaultEvents as $evt) {
@@ -620,10 +617,10 @@ switch ($route) {
                 // Seed Teams
                 $defaultPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
                 $teams = [
-                    ['T-1001', 'Alpha Coders', 'John Doe', 'REG001', 3, json_encode(['John Doe', 'Alice Smith', 'Bob Johnson']), 40, $timestamp - 3600000 * 5, 'Web Development', $defaultPhoto],
-                    ['T-1002', 'Beta Blockers', 'Mary Sue', 'REG002', 2, json_encode(['Mary Sue', 'Dave Miller']), 20, $timestamp - 3600000 * 4, 'AI/ML Hackathon', $defaultPhoto],
-                    ['T-1003', 'Gamma Geniuses', 'Sarah Connor', 'REG003', 4, json_encode(['Sarah Connor', 'Kyle Reese', 'John Connor', 'T-800']), 50, $timestamp - 3600000 * 3, 'Cybersecurity CTF', $defaultPhoto],
-                    ['T-1004', 'Delta Devs', 'Bruce Wayne', 'REG004', 3, json_encode(['Bruce Wayne', 'Clark Kent', 'Diana Prince']), 10, $timestamp - 3600000 * 2, 'App Development', $defaultPhoto]
+                    ['T-1001', 'Alpha Coders', 'John Doe', 'REG001', 3, json_encode(['John Doe', 'Alice Smith', 'Bob Johnson']), 40, $timestamp - 3600000 * 5, 'Agentic Ai Day', $defaultPhoto],
+                    ['T-1002', 'Beta Blockers', 'Mary Sue', 'REG002', 2, json_encode(['Mary Sue', 'Dave Miller']), 20, $timestamp - 3600000 * 4, 'Agentic Ai Day', $defaultPhoto],
+                    ['T-1003', 'Gamma Geniuses', 'Sarah Connor', 'REG003', 4, json_encode(['Sarah Connor', 'Kyle Reese', 'John Connor', 'T-800']), 50, $timestamp - 3600000 * 3, 'Agentic Ai Day', $defaultPhoto],
+                    ['T-1004', 'Delta Devs', 'Bruce Wayne', 'REG004', 3, json_encode(['Bruce Wayne', 'Clark Kent', 'Diana Prince']), 10, $timestamp - 3600000 * 2, 'Agentic Ai Day', $defaultPhoto]
                 ];
                 $stmt = $pdo->prepare("INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, leader_photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 foreach ($teams as $team) {
@@ -667,10 +664,7 @@ switch ($route) {
                 $count = $pdo->query("SELECT COUNT(*) as count FROM events")->fetch()['count'];
                 if ($count == 0) {
                     $defaultEvents = [
-                        ['E-1', 'Web Development', round(microtime(true) * 1000)],
-                        ['E-2', 'AI/ML Hackathon', round(microtime(true) * 1000)],
-                        ['E-3', 'Cybersecurity CTF', round(microtime(true) * 1000)],
-                        ['E-4', 'App Development', round(microtime(true) * 1000)]
+                        ['E-1', 'Agentic Ai Day', round(microtime(true) * 1000)]
                     ];
                     $ins = $pdo->prepare("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)");
                     foreach ($defaultEvents as $evt) {
@@ -696,10 +690,7 @@ switch ($route) {
                 $pdo->exec("DELETE FROM events");
 
                 $defaultEvents = [
-                    ['E-1', 'Web Development', round(microtime(true) * 1000)],
-                    ['E-2', 'AI/ML Hackathon', round(microtime(true) * 1000)],
-                    ['E-3', 'Cybersecurity CTF', round(microtime(true) * 1000)],
-                    ['E-4', 'App Development', round(microtime(true) * 1000)]
+                    ['E-1', 'Agentic Ai Day', round(microtime(true) * 1000)]
                 ];
                 $ins = $pdo->prepare("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)");
                 foreach ($defaultEvents as $evt) {

@@ -132,54 +132,62 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
       const teamsInEvent = sortedTeams.filter(t => t.event === slot.eventName);
       return (
         <div key={idx} className="glass-panel leaderboard-box-panel">
-          <h3>
-            <span>🏆 {slot.title}</span>
-            <span style={{ fontSize: '11px', color: 'var(--accent-cyan)' }}>({teamsInEvent.length} Teams)</span>
-          </h3>
+          <div className="leaderboard-box-header">
+            <div className="box-header-title">
+              <span className="trophy-icon">🏆</span>
+              <h4>{slot.title}</h4>
+            </div>
+            <span className="team-count-pill">{teamsInEvent.length} Teams</span>
+          </div>
+
           <div className="table-container-scrollable">
             {teamsInEvent.length === 0 ? (
-              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>
-                No teams registered yet.
+              <div className="empty-leaderboard-state">
+                <div className="empty-state-icon">⚡</div>
+                <h5>Waiting for Teams</h5>
+                <p>No teams registered for {slot.eventName} yet.</p>
               </div>
             ) : (
-              <table>
+              <table className="modern-leaderboard-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '50px' }}>Rank</th>
+                    <th style={{ width: '60px' }}>Rank</th>
                     <th>Team</th>
-                    <th style={{ textAlign: 'right' }}>Points</th>
+                    <th style={{ textAlign: 'right' }}>Score</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teamsInEvent.map((team, rIdx) => {
-                    const rankClass = rIdx === 0 ? 'rank-text-gold' : rIdx === 1 ? 'rank-text-silver' : rIdx === 2 ? 'rank-text-bronze' : '';
-                    const rankIcon = rIdx === 0 ? '🥇' : rIdx === 1 ? '🥈' : rIdx === 2 ? '🥉' : `#${rIdx + 1}`;
+                    const isPodium = rIdx < 3;
+                    const rankClass = rIdx === 0 ? 'rank-gold' : rIdx === 1 ? 'rank-silver' : rIdx === 2 ? 'rank-bronze' : 'rank-normal';
+                    const rankBadge = rIdx === 0 ? '🥇 1st' : rIdx === 1 ? '🥈 2nd' : rIdx === 2 ? '🥉 3rd' : `#${rIdx + 1}`;
+                    
                     return (
-                      <tr key={team.id}>
-                        <td className={rankClass} style={{ fontSize: '20px' }}>{rankIcon}</td>
+                      <tr key={team.id} className={`leaderboard-item-row ${isPodium ? 'podium-row' : ''}`}>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <img
-                              src={team.leaderPhoto || team.leader_photo || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"}
-                              alt="Leader"
-                              style={{
-                                width: '38px',
-                                height: '38px',
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                background: 'rgba(255, 255, 255, 0.05)'
-                              }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: '600' }}>{team.name}</div>
-                              <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>
-                                <span>{team.id}</span>
-                              </div>
+                          <span className={`modern-rank-badge ${rankClass}`}>
+                            {rankBadge}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="team-cell-content">
+                            <div className={`avatar-ring ${rankClass}`}>
+                              <img
+                                src={team.leaderPhoto || team.leader_photo || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"}
+                                alt="Leader"
+                              />
+                            </div>
+                            <div className="team-meta">
+                              <span className="team-title-text">{team.name}</span>
+                              <span className="team-sub-id">{team.id} • {team.leaderName || team.leader_name}</span>
                             </div>
                           </div>
                         </td>
-                        <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--accent-cyan)' }}>{team.points} pts</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <span className="points-pill-highlight">
+                            {team.points} <small>PTS</small>
+                          </span>
+                        </td>
                       </tr>
                     );
                   })}
@@ -194,46 +202,62 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
     if (slot.type === 'scanner') {
       return (
         <div key={idx} className="glass-panel leaderboard-box-panel">
-          <h3>
-            <span>🎟️/🎓 Visitors Leaderboard</span>
-            <span style={{ fontSize: '11px', color: 'var(--accent-cyan)' }}>({combinedScanners.length} Entries)</span>
-          </h3>
+          <div className="leaderboard-box-header">
+            <div className="box-header-title">
+              <span className="trophy-icon">🎟️</span>
+              <h4>Visitors & Faculty Standings</h4>
+            </div>
+            <span className="team-count-pill">{combinedScanners.length} Scanners</span>
+          </div>
+
           <div className="table-container-scrollable">
             {combinedScanners.length === 0 ? (
-              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>
-                No scanners registered yet.
+              <div className="empty-leaderboard-state">
+                <div className="empty-state-icon">🎟️</div>
+                <h5>No Scanners Yet</h5>
+                <p>Visitor and faculty point activity will appear here in real-time.</p>
               </div>
             ) : (
-              <table>
+              <table className="modern-leaderboard-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '50px' }}>Rank</th>
-                    <th>Visitor</th>
-                    <th style={{ textAlign: 'right' }}>Points</th>
+                    <th style={{ width: '60px' }}>Rank</th>
+                    <th>Participant</th>
+                    <th style={{ textAlign: 'right' }}>Score</th>
                   </tr>
                 </thead>
                 <tbody>
                   {combinedScanners.map((sc, rIdx) => {
-                    const rankClass = rIdx === 0 ? 'rank-text-gold' : rIdx === 1 ? 'rank-text-silver' : rIdx === 2 ? 'rank-text-bronze' : '';
-                    const rankIcon = rIdx === 0 ? '🥇' : rIdx === 1 ? '🥈' : rIdx === 2 ? '🥉' : `#${rIdx + 1}`;
+                    const isPodium = rIdx < 3;
+                    const rankClass = rIdx === 0 ? 'rank-gold' : rIdx === 1 ? 'rank-silver' : rIdx === 2 ? 'rank-bronze' : 'rank-normal';
+                    const rankBadge = rIdx === 0 ? '🥇 1st' : rIdx === 1 ? '🥈 2nd' : rIdx === 2 ? '🥉 3rd' : `#${rIdx + 1}`;
                     const scanCount = scans.filter(s => s.scannerId === sc.id && s.status === 'approved').length;
+                    
                     return (
-                      <tr key={sc.id}>
-                        <td className={rankClass} style={{ fontSize: '16px' }}>{rankIcon}</td>
+                      <tr key={sc.id} className={`leaderboard-item-row ${isPodium ? 'podium-row' : ''}`}>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontWeight: '600' }}>{sc.name}</span>
-                            <span className="accent-badge" style={{
-                              fontSize: '9px',
-                              padding: '2px 6px',
-                              background: sc.role === 'Faculty' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(6, 182, 212, 0.15)',
-                              color: sc.role === 'Faculty' ? 'var(--accent-warning)' : 'var(--accent-tech)',
-                              border: sc.role === 'Faculty' ? '1px solid rgba(245, 158, 11, 0.2)' : '1px solid rgba(6, 182, 212, 0.2)'
-                            }}>{sc.role}</span>
-                          </div>
-                          <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{sc.mobile || sc.id} | {scanCount} scans</div>
+                          <span className={`modern-rank-badge ${rankClass}`}>
+                            {rankBadge}
+                          </span>
                         </td>
-                        <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--accent-cyan)' }}>{sc.points} pts</td>
+                        <td>
+                          <div className="team-cell-content">
+                            <div className="team-meta">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span className="team-title-text">{sc.name}</span>
+                                <span className={`role-pill-badge ${sc.role.toLowerCase()}`}>
+                                  {sc.role}
+                                </span>
+                              </div>
+                              <span className="team-sub-id">{sc.mobile || sc.id} • {scanCount} approved scans</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <span className="points-pill-highlight">
+                            {sc.points} <small>PTS</small>
+                          </span>
+                        </td>
                       </tr>
                     );
                   })}
@@ -246,10 +270,17 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
     }
 
     return (
-      <div key={idx} className="glass-panel leaderboard-box-panel empty-state">
-        <h3>🏆 {slot.title}</h3>
-        <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
-          TBD Standings
+      <div key={idx} className="glass-panel leaderboard-box-panel empty-arena-panel">
+        <div className="leaderboard-box-header">
+          <div className="box-header-title">
+            <span className="trophy-icon">🏆</span>
+            <h4>{slot.title}</h4>
+          </div>
+        </div>
+        <div className="empty-leaderboard-state">
+          <div className="empty-state-icon">🛡️</div>
+          <h5>Open Division</h5>
+          <p>Upcoming event bracket</p>
         </div>
       </div>
     );
@@ -257,52 +288,72 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
 
   return (
     <div className="admin-dashboard fade-in">
-      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2>Admin Management & Analytics</h2>
-          <p>Real-time overview of the AI Hackathon scoreboards, participant stats, and event setups.</p>
+      <div className="analytics-hero-header glass-panel">
+        <div className="hero-header-text">
+          <div className="live-status-pill">
+            <span className="live-dot-pulse"></span>
+            <span>LIVE LEADERBOARD</span>
+          </div>
+          <h2>Analytics & Standings Arena</h2>
+          <p>Real-time telemetry, participant stats, and live scoreboard updates for Agentic AI Day.</p>
         </div>
+
       </div>
 
       {/* Analytics Cards */}
       <div className="stats-grid">
-        <div className="glass-panel stat-card">
-          <div className="stat-icon team-icon">👥</div>
+        <div className="glass-panel stat-card card-cyan">
+          <div className="stat-icon-wrapper team-icon">
+            <span>👥</span>
+          </div>
           <div className="stat-info">
             <span className="stat-label">Total Teams</span>
             <span className="stat-value">{totalTeamsCount}</span>
+            <span className="stat-hint">Registered squads</span>
           </div>
         </div>
 
-        <div className="glass-panel stat-card">
-          <div className="stat-icon visitor-icon">🎟️</div>
+        <div className="glass-panel stat-card card-purple">
+          <div className="stat-icon-wrapper visitor-icon">
+            <span>🎟️</span>
+          </div>
           <div className="stat-info">
             <span className="stat-label">Student Visitors</span>
             <span className="stat-value">{totalVisitorsCount}</span>
+            <span className="stat-hint">Audience scanners</span>
           </div>
         </div>
 
-        <div className="glass-panel stat-card">
-          <div className="stat-icon faculty-icon">🎓</div>
+        <div className="glass-panel stat-card card-amber">
+          <div className="stat-icon-wrapper faculty-icon">
+            <span>🎓</span>
+          </div>
           <div className="stat-info">
             <span className="stat-label">Total Faculty</span>
             <span className="stat-value">{totalFacultyCount}</span>
+            <span className="stat-hint">Evaluators</span>
           </div>
         </div>
 
-        <div className="glass-panel stat-card">
-          <div className="stat-icon scan-icon">⚡</div>
+        <div className="glass-panel stat-card card-emerald">
+          <div className="stat-icon-wrapper scan-icon">
+            <span>⚡</span>
+          </div>
           <div className="stat-info">
             <span className="stat-label">Approved Scans</span>
             <span className="stat-value">{totalApprovedScans}</span>
+            <span className="stat-hint">Verified QR scans</span>
           </div>
         </div>
 
-        <div className="glass-panel stat-card">
-          <div className="stat-icon points-icon">🏆</div>
+        <div className="glass-panel stat-card card-gold">
+          <div className="stat-icon-wrapper points-icon">
+            <span>🏆</span>
+          </div>
           <div className="stat-info">
             <span className="stat-label">Total Points</span>
             <span className="stat-value">{totalPointsAwarded}</span>
+            <span className="stat-hint">Awarded in arena</span>
           </div>
         </div>
       </div>
@@ -310,7 +361,7 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
       {/* 2x2 Leaderboards Grid */}
       <div className="leaderboard-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0 }}>🏆 Hackathon Standings (2x2 Scoreboards)</h3>
+          <h3 style={{ margin: 0 }}>🏆 Live Standings (Scoreboards)</h3>
           <button 
             onClick={() => window.open('?view=leaderboard', '_blank')}
             className="btn btn-outline"
@@ -326,7 +377,7 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
         </div>
       </div>
 
-      {/* Backup Scanner Leaderboard if not visible in 2x2 grid (i.e. if 4+ events occupy the grid) */}
+      {/* Backup Scanner Leaderboard if not visible in 2x2 grid */}
       {!isScannerInGrid && (
         <div style={{ marginTop: '24px', marginBottom: '24px' }}>
           <div className="glass-panel leaderboard-table-panel">
@@ -371,87 +422,6 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
           </div>
         </div>
       )}
-
-      {/* Event Management & Database Tools Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginTop: '24px' }}>
-        {/* Event Management Widget */}
-        <div className="glass-panel">
-          <h3>📅 Event Management</h3>
-          <p>Add new events or delete existing ones. Seed events are loaded by default.</p>
-          
-          <form onSubmit={handleAddEventSubmit} style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '12px' }}>
-            <input
-              type="text"
-              placeholder="Event Name (e.g. AI Hack)"
-              value={newEventName}
-              onChange={(e) => setNewEventName(e.target.value)}
-              style={{
-                flex: 1,
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid var(--glass-border)',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                color: 'var(--text-primary)',
-                outline: 'none'
-              }}
-              required
-            />
-            <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px' }}>
-              Add
-            </button>
-          </form>
-
-          <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-            {events.length === 0 ? (
-              <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>No events registered yet.</p>
-            ) : (
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {events.map(evt => (
-                  <li
-                    key={evt.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '8px 12px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
-                      borderRadius: '8px',
-                      marginBottom: '6px'
-                    }}
-                  >
-                    <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{evt.name}</span>
-                    <button
-                      onClick={() => handleDeleteEventClick(evt.id, evt.name)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--accent-danger)',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        {/* Database Tools Widget */}
-        <div className="glass-panel admin-controls-panel">
-          <h3>🛠️ Database Tools</h3>
-          <p>Manage sandbox state. Clear the database to start fresh.</p>
-          <div className="control-buttons" style={{ marginTop: '16px' }}>
-            <button onClick={handleReset} className="btn btn-danger">
-              Reset Database
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

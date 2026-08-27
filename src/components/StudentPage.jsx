@@ -19,6 +19,7 @@ export default function StudentPage({ teams, scans, events = [] }) {
   // Login Form State
   const [loginTeamName, setLoginTeamName] = useState('');
   const [loginLeaderRegNo, setLoginLeaderRegNo] = useState('');
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
   // Registration Form State
@@ -48,6 +49,13 @@ export default function StudentPage({ teams, scans, events = [] }) {
     setFpError('');
     setFpSuccessMessage('');
   }, [isRegistering, isForgotPassword]);
+
+  // Default to first event if events are loaded
+  useEffect(() => {
+    if (events && events.length > 0 && !teamEvent) {
+      setTeamEvent(events[0].name);
+    }
+  }, [events, teamEvent]);
 
   const handleOtherMemberCountChange = (e) => {
     const count = parseInt(e.target.value, 10);
@@ -257,8 +265,11 @@ export default function StudentPage({ teams, scans, events = [] }) {
       return (
         <div className="fade-in">
           <div className="glass-panel registration-box">
+            <div className="card-top-icon-circle">
+              <span>🎓</span>
+            </div>
             <div className="panel-header">
-              <span className="accent-badge">STUDENT REGISTRATION</span>
+              <span className="accent-badge-pill">— STUDENT REGISTRATION —</span>
               <h2>Create Your Hackathon Team</h2>
               <p>Register your team to generate your unique points-tracking QR code.</p>
             </div>
@@ -266,131 +277,159 @@ export default function StudentPage({ teams, scans, events = [] }) {
             <form onSubmit={handleRegister} className="registration-form">
               {registerError && <div className="error-message alert-pop">{registerError}</div>}
 
-              <div className="form-group">
-                <label htmlFor="teamName">Team Name</label>
-                <input
-                  id="teamName"
-                  type="text"
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  placeholder="Enter a cool team name..."
-                  required
-                />
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon">👥</div>
+                <div className="typebox-content">
+                  <label htmlFor="teamName" className="typebox-label">Team Name</label>
+                  <input
+                    id="teamName"
+                    type="text"
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
+                    placeholder="Enter a cool team name"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="leaderName">Team Leader Full Name</label>
-                <input
-                  id="leaderName"
-                  type="text"
-                  value={leaderName}
-                  onChange={(e) => setLeaderName(e.target.value)}
-                  placeholder="Enter team leader's name..."
-                  required
-                />
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon">👤</div>
+                <div className="typebox-content">
+                  <label htmlFor="leaderName" className="typebox-label">Team Leader Full Name</label>
+                  <input
+                    id="leaderName"
+                    type="text"
+                    value={leaderName}
+                    onChange={(e) => setLeaderName(e.target.value)}
+                    placeholder="Enter team leader's name"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="leaderRegNo">Leader Registration Number</label>
-                <input
-                  id="leaderRegNo"
-                  type="text"
-                  value={leaderRegNo}
-                  onChange={(e) => setLeaderRegNo(e.target.value)}
-                  placeholder="Leader Registration Number (used for login)..."
-                  required
-                />
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon">🪪</div>
+                <div className="typebox-content">
+                  <label htmlFor="leaderRegNo" className="typebox-label">Leader Registration Number</label>
+                  <input
+                    id="leaderRegNo"
+                    type="text"
+                    value={leaderRegNo}
+                    onChange={(e) => setLeaderRegNo(e.target.value)}
+                    placeholder="Leader Registration Number (used for login)"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="leaderPhoto">Leader Photo (Mandatory)</label>
-                <input
-                  id="leaderPhoto"
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  required
-                  style={{
-                    padding: '8px',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px dashed var(--glass-border)',
-                    borderRadius: '8px',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer'
-                  }}
-                />
-                {photoError && <div style={{ color: 'var(--accent-danger)', fontSize: '11px', marginTop: '4px' }}>{photoError}</div>}
+              <div className="pill-typebox-wrapper" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="typebox-left-icon">📸</div>
+                  <div className="typebox-content">
+                    <label htmlFor="leaderPhoto" className="typebox-label">Leader Photo (Mandatory)</label>
+                    <input
+                      id="leaderPhoto"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      required
+                      style={{
+                        padding: '4px 0',
+                        fontSize: '12px',
+                        color: '#475569',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  </div>
+                </div>
+                {photoError && <div style={{ color: 'var(--accent-danger)', fontSize: '11px', marginTop: '2px' }}>{photoError}</div>}
                 {leaderPhoto && (
-                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '46px' }}>
                     <img
                       src={leaderPhoto}
                       alt="Preview"
-                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--accent-tech)' }}
+                      style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-indigo)' }}
                     />
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Image uploaded successfully</span>
+                    <span style={{ fontSize: '11.5px', color: 'var(--accent-emerald)', fontWeight: '600' }}>✓ Image uploaded</span>
                   </div>
                 )}
               </div>
 
-              <div className="form-group">
-                <label htmlFor="teamEvent">Select Hackathon Event</label>
-                <select
-                  id="teamEvent"
-                  value={teamEvent}
-                  onChange={(e) => setTeamEvent(e.target.value)}
-                  required
-                >
-                  <option value="">-- Choose Event --</option>
-                  {events.map(evt => (
-                    <option key={evt.id} value={evt.name}>
-                      {evt.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon">🎯</div>
+                <div className="typebox-content">
+                  <label htmlFor="teamEvent" className="typebox-label">Event</label>
+                  <select
+                    id="teamEvent"
+                    value={teamEvent}
+                    onChange={(e) => setTeamEvent(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Choose Event --</option>
+                    {events.map(evt => (
+                      <option key={evt.id} value={evt.name}>
+                        {evt.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="otherMemberCount">Number of Additional Members</label>
-                <select
-                  id="otherMemberCount"
-                  value={otherMemberCount}
-                  onChange={handleOtherMemberCountChange}
-                >
-                  {[0, 1, 2, 3, 4].map(num => (
-                    <option key={num} value={num}>
-                      {num} {num === 1 ? 'Other Member' : 'Other Members'}
-                    </option>
-                  ))}
-                </select>
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon">👥</div>
+                <div className="typebox-content">
+                  <label htmlFor="otherMemberCount" className="typebox-label">Additional Members</label>
+                  <select
+                    id="otherMemberCount"
+                    value={otherMemberCount}
+                    onChange={handleOtherMemberCountChange}
+                  >
+                    {[0, 1, 2, 3, 4].map(num => (
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? 'Other Member' : 'Other Members'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {otherMembers.length > 0 && (
-                <div className="members-section">
-                  <label>Additional Member Names</label>
+                <div className="members-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', textAlign: 'left', marginLeft: '4px' }}>
+                    Additional Member Names
+                  </label>
                   {otherMembers.map((member, index) => (
-                    <div key={index} className="form-group member-input fade-in-list">
-                      <input
-                        type="text"
-                        value={member}
-                        onChange={(e) => handleOtherMemberNameChange(index, e.target.value)}
-                        placeholder={`Member #${index + 2} Name`}
-                      />
+                    <div key={index} className="pill-typebox-wrapper fade-in-list">
+                      <div className="typebox-left-icon">👤</div>
+                      <div className="typebox-content">
+                        <label className="typebox-label">Member #{index + 2} Name</label>
+                        <input
+                          type="text"
+                          value={member}
+                          onChange={(e) => handleOtherMemberNameChange(index, e.target.value)}
+                          placeholder={`Enter Member #${index + 2} Full Name`}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              <button type="submit" className="btn btn-primary btn-block">
-                Register Team & Generate QR
+              <button type="submit" className="btn btn-pill-action btn-block">
+                <span className="btn-icon-sq">✨</span>
+                <span className="btn-text-main">Register Team & Generate QR</span>
+                <span className="btn-arrow-right">→</span>
               </button>
 
-              <p className="toggle-auth-link">
-                Already registered your team?{' '}
-                <button type="button" onClick={() => { setIsRegistering(false); setIsForgotPassword(false); }}>
-                  Log In Here
+              <div className="card-footer-links">
+                <button type="button" onClick={() => { setIsRegistering(false); setIsForgotPassword(false); }} className="footer-link-btn">
+                  <span>←</span> Back to Login
                 </button>
-              </p>
+              </div>
             </form>
+          </div>
+          <div className="secure-badge-note">
+            <span>🛡️</span> Secure Portal • Your data is protected with enterprise-grade security
           </div>
         </div>
       );
@@ -400,74 +439,93 @@ export default function StudentPage({ teams, scans, events = [] }) {
       return (
         <div className="fade-in">
           <div className="glass-panel registration-box">
+            <div className="card-top-icon-circle">
+              <span>🔑</span>
+            </div>
             <div className="panel-header">
-              <span className="accent-badge">FORGOT PASSWORD</span>
+              <span className="accent-badge-pill">— FORGOT PASSWORD —</span>
               <h2>Retrieve Registration No.</h2>
               <p>Enter the details below and get the unique code from the Admin page to retrieve your login password.</p>
             </div>
 
             <form onSubmit={handleForgotPassword} className="registration-form">
               {fpError && <div className="error-message alert-pop">{fpError}</div>}
-              {fpSuccessMessage && <div className="success-message alert-pop" style={{ color: 'var(--accent-tech)' }}>{fpSuccessMessage}</div>}
+              {fpSuccessMessage && <div className="success-message alert-pop" style={{ color: 'var(--accent-emerald)' }}>{fpSuccessMessage}</div>}
 
-              <div className="form-group">
-                <label htmlFor="fpTeamName">Team Name</label>
-                <input
-                  id="fpTeamName"
-                  type="text"
-                  value={fpTeamName}
-                  onChange={(e) => setFpTeamName(e.target.value)}
-                  placeholder="Enter registered Team Name..."
-                  required
-                />
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon">👥</div>
+                <div className="typebox-content">
+                  <label htmlFor="fpTeamName" className="typebox-label">Team Name</label>
+                  <input
+                    id="fpTeamName"
+                    type="text"
+                    value={fpTeamName}
+                    onChange={(e) => setFpTeamName(e.target.value)}
+                    placeholder="Enter registered Team Name"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="fpLeaderName">Team Leader Full Name</label>
-                <input
-                  id="fpLeaderName"
-                  type="text"
-                  value={fpLeaderName}
-                  onChange={(e) => setFpLeaderName(e.target.value)}
-                  placeholder="Enter team leader's name..."
-                  required
-                />
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon">👤</div>
+                <div className="typebox-content">
+                  <label htmlFor="fpLeaderName" className="typebox-label">Team Leader Full Name</label>
+                  <input
+                    id="fpLeaderName"
+                    type="text"
+                    value={fpLeaderName}
+                    onChange={(e) => setFpLeaderName(e.target.value)}
+                    placeholder="Enter team leader's name"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="fpUniqueCode">Unique Code</label>
-                <input
-                  id="fpUniqueCode"
-                  type="text"
-                  value={fpUniqueCode}
-                  onChange={(e) => setFpUniqueCode(e.target.value)}
-                  placeholder="Get this unique code from the Admin..."
-                  required
-                />
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon">🔑</div>
+                <div className="typebox-content">
+                  <label htmlFor="fpUniqueCode" className="typebox-label">Unique Code</label>
+                  <input
+                    id="fpUniqueCode"
+                    type="text"
+                    value={fpUniqueCode}
+                    onChange={(e) => setFpUniqueCode(e.target.value)}
+                    placeholder="Get unique code from Admin"
+                    required
+                  />
+                </div>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-block">
-                Retrieve Registration Number
+              <button type="submit" className="btn btn-pill-action btn-block">
+                <span className="btn-icon-sq">🔓</span>
+                <span className="btn-text-main">Retrieve Registration Number</span>
+                <span className="btn-arrow-right">→</span>
               </button>
 
-              <p className="toggle-auth-link">
-                Remembered it?{' '}
-                <button type="button" onClick={() => setIsForgotPassword(false)}>
-                  Back to Login
+              <div className="card-footer-links">
+                <button type="button" onClick={() => setIsForgotPassword(false)} className="footer-link-btn">
+                  <span>←</span> Back to Login
                 </button>
-              </p>
+              </div>
             </form>
+          </div>
+          <div className="secure-badge-note">
+            <span>🛡️</span> Secure Portal • Your data is protected with enterprise-grade security
           </div>
         </div>
       );
     }
 
-    // Default View: Student Login
+    // Default View: Student Login (Exact match to Mockup Image)
     return (
       <div className="fade-in">
         <div className="glass-panel registration-box">
+          <div className="card-top-icon-circle">
+            <span>🎓</span>
+          </div>
           <div className="panel-header">
-            <span className="accent-badge">STUDENT LOGIN</span>
+            <span className="accent-badge-pill">— STUDENT LOGIN —</span>
             <h2>Access Team Dashboard</h2>
             <p>Log in with your Team Name and Team Leader's Registration Number.</p>
           </div>
@@ -475,44 +533,75 @@ export default function StudentPage({ teams, scans, events = [] }) {
           <form onSubmit={handleLogin} className="registration-form">
             {loginError && <div className="error-message alert-pop">{loginError}</div>}
 
-            <div className="form-group">
-              <label htmlFor="loginTeamName">Team Name</label>
-              <input
-                id="loginTeamName"
-                type="text"
-                value={loginTeamName}
-                onChange={(e) => setLoginTeamName(e.target.value)}
-                placeholder="Enter registered Team Name..."
-                required
-              />
+            <div className="pill-typebox-wrapper">
+              <div className="typebox-left-icon">👥</div>
+              <div className="typebox-content">
+                <label htmlFor="loginTeamName" className="typebox-label">Team Name</label>
+                <input
+                  id="loginTeamName"
+                  type="text"
+                  value={loginTeamName}
+                  onChange={(e) => setLoginTeamName(e.target.value)}
+                  placeholder="Enter registered Team Name"
+                  required
+                />
+              </div>
+              <div className="typebox-right-icon">🪪</div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="loginLeaderRegNo">Leader Registration Number</label>
-              <input
-                id="loginLeaderRegNo"
-                type="password"
-                value={loginLeaderRegNo}
-                onChange={(e) => setLoginLeaderRegNo(e.target.value)}
-                placeholder="Enter leader registration number as password..."
-                required
-              />
+            <div className="pill-typebox-wrapper">
+              <div className="typebox-left-icon">🔒</div>
+              <div className="typebox-content">
+                <label htmlFor="loginLeaderRegNo" className="typebox-label">Leader Registration Number</label>
+                <input
+                  id="loginLeaderRegNo"
+                  type={showStudentPassword ? 'text' : 'password'}
+                  value={loginLeaderRegNo}
+                  onChange={(e) => setLoginLeaderRegNo(e.target.value)}
+                  placeholder="Enter leader registration number as password"
+                  required
+                />
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowStudentPassword(!showStudentPassword)} 
+                className="typebox-right-btn"
+                title="Toggle password visibility"
+              >
+                {showStudentPassword ? '🙈' : '👁️'}
+              </button>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-block">
-              Login to Dashboard
+            <button type="submit" className="btn btn-pill-action btn-block">
+              <span className="btn-icon-sq">🔒</span>
+              <span className="btn-text-main">Login to Dashboard</span>
+              <span className="btn-arrow-right">→</span>
             </button>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: '16px' }}>
-              <button type="button" onClick={() => setIsForgotPassword(true)} style={{ background: 'none', border: 'none', color: 'var(--accent-tech)', cursor: 'pointer' }}>
-                Forgot Password?
+            <div className="card-footer-links">
+              <button 
+                type="button" 
+                onClick={() => setIsForgotPassword(true)} 
+                className="footer-link-btn"
+              >
+                <span>🔗</span> Forgot Password?
               </button>
               
-              <button type="button" onClick={() => { setIsRegistering(true); setIsForgotPassword(false); }} style={{ background: 'none', border: 'none', color: 'var(--accent-tech)', cursor: 'pointer' }}>
-                Register Your Team
+              <span className="footer-link-divider">|</span>
+              
+              <button 
+                type="button" 
+                onClick={() => { setIsRegistering(true); setIsForgotPassword(false); }} 
+                className="footer-link-btn"
+              >
+                <span>👥+</span> Register Your Team
               </button>
             </div>
           </form>
+        </div>
+
+        <div className="secure-badge-note">
+          <span>🛡️</span> Secure Portal • Your data is protected with enterprise-grade security
         </div>
       </div>
     );
@@ -587,7 +676,7 @@ export default function StudentPage({ teams, scans, events = [] }) {
           <div className="glass-panel profile-panel">
             <div className="profile-header" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <img
-                src={currentTeam.leaderPhoto || currentTeam.leader_photo || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"}
+                src={currentTeam.leaderPhoto || currentTeam.leader_photo || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"}
                 alt="Leader"
                 style={{
                   width: '56px',

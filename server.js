@@ -207,20 +207,21 @@ const initDb = async () => {
     )
   `);
 
-  // Seed default events if events table is empty
+  // Seed default events if events table is empty or contains old default events
   try {
     const existingEvents = await dbAll("SELECT * FROM events");
-    if (existingEvents.length === 0) {
-      const defaultEvents = [
-        ['E-1', 'Web Development', Date.now()],
-        ['E-2', 'AI/ML Hackathon', Date.now()],
-        ['E-3', 'Cybersecurity CTF', Date.now()],
-        ['E-4', 'App Development', Date.now()]
-      ];
-      for (const evt of defaultEvents) {
-        await dbRun("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)", evt);
+    const oldDefaultNames = ['Web Development', 'AI/ML Hackathon', 'Cybersecurity CTF', 'App Development'];
+    const hasOnlyOldDefaults = existingEvents.length > 0 && existingEvents.every(e => oldDefaultNames.includes(e.name));
+
+    if (existingEvents.length === 0 || hasOnlyOldDefaults) {
+      await dbRun("DELETE FROM events WHERE name IN ('Web Development', 'AI/ML Hackathon', 'Cybersecurity CTF', 'App Development')");
+      const checkCurrent = await dbAll("SELECT * FROM events WHERE name = 'Agentic Ai Day'");
+      if (checkCurrent.length === 0) {
+        await dbRun("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)", ['E-1', 'Agentic Ai Day', Date.now()]);
       }
-      console.log('Default events seeded.');
+      // Also update any teams previously assigned to old events
+      await dbRun("UPDATE teams SET event = 'Agentic Ai Day' WHERE event IN ('Web Development', 'AI/ML Hackathon', 'Cybersecurity CTF', 'App Development')");
+      console.log('Default event Agentic Ai Day configured.');
     }
   } catch (err) {
     console.error('Error seeding default events:', err.message);
@@ -770,10 +771,10 @@ app.post('/api/seed', async (req, res) => {
     // Seed Teams
     const defaultPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
     const teams = [
-      ['T-1001', 'Alpha Coders', 'John Doe', 'REG001', 3, JSON.stringify(['John Doe', 'Alice Smith', 'Bob Johnson']), 40, timestamp - 3600000 * 5, 'Web Development', defaultPhoto, 'A1B2C3'],
-      ['T-1002', 'Beta Blockers', 'Mary Sue', 'REG002', 2, JSON.stringify(['Mary Sue', 'Dave Miller']), 20, timestamp - 3600000 * 4, 'AI/ML Hackathon', defaultPhoto, 'D4E5F6'],
-      ['T-1003', 'Gamma Geniuses', 'Sarah Connor', 'REG003', 4, JSON.stringify(['Sarah Connor', 'Kyle Reese', 'John Connor', 'T-800']), 50, timestamp - 3600000 * 3, 'Cybersecurity CTF', defaultPhoto, 'G7H8I9'],
-      ['T-1004', 'Delta Devs', 'Bruce Wayne', 'REG004', 3, JSON.stringify(['Bruce Wayne', 'Clark Kent', 'Diana Prince']), 10, timestamp - 3600000 * 2, 'App Development', defaultPhoto, 'J0K1L2']
+      ['T-1001', 'Alpha Coders', 'John Doe', 'REG001', 3, JSON.stringify(['John Doe', 'Alice Smith', 'Bob Johnson']), 40, timestamp - 3600000 * 5, 'Agentic Ai Day', defaultPhoto, 'A1B2C3'],
+      ['T-1002', 'Beta Blockers', 'Mary Sue', 'REG002', 2, JSON.stringify(['Mary Sue', 'Dave Miller']), 20, timestamp - 3600000 * 4, 'Agentic Ai Day', defaultPhoto, 'D4E5F6'],
+      ['T-1003', 'Gamma Geniuses', 'Sarah Connor', 'REG003', 4, JSON.stringify(['Sarah Connor', 'Kyle Reese', 'John Connor', 'T-800']), 50, timestamp - 3600000 * 3, 'Agentic Ai Day', defaultPhoto, 'G7H8I9'],
+      ['T-1004', 'Delta Devs', 'Bruce Wayne', 'REG004', 3, JSON.stringify(['Bruce Wayne', 'Clark Kent', 'Diana Prince']), 10, timestamp - 3600000 * 2, 'Agentic Ai Day', defaultPhoto, 'J0K1L2']
     ];
     for (const team of teams) {
       await dbRun(`INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, leader_photo, unique_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, team);
@@ -813,10 +814,7 @@ app.post('/api/seed', async (req, res) => {
     const existingEvents = await dbAll("SELECT id FROM events");
     if (existingEvents.length === 0) {
       const defaultEvents = [
-        ['E-1', 'Web Development', Date.now()],
-        ['E-2', 'AI/ML Hackathon', Date.now()],
-        ['E-3', 'Cybersecurity CTF', Date.now()],
-        ['E-4', 'App Development', Date.now()]
+        ['E-1', 'Agentic Ai Day', Date.now()]
       ];
       for (const evt of defaultEvents) {
         await dbRun("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)", evt);
@@ -839,10 +837,7 @@ app.post('/api/reset', async (req, res) => {
     await dbRun('DELETE FROM events');
 
     const defaultEvents = [
-      ['E-1', 'Web Development', Date.now()],
-      ['E-2', 'AI/ML Hackathon', Date.now()],
-      ['E-3', 'Cybersecurity CTF', Date.now()],
-      ['E-4', 'App Development', Date.now()]
+      ['E-1', 'Agentic Ai Day', Date.now()]
     ];
     for (const evt of defaultEvents) {
       await dbRun("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)", evt);
