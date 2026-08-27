@@ -547,9 +547,7 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
         </div>
       )}
 
-      {/* ========================================================
-          SECURITY PASSWORD VERIFICATION MODAL
-      ======================================================== */}
+      {/* Critical Action Security Password Verification Modal */}
       {securityModal.isOpen && (
         <div style={{
           position: 'fixed',
@@ -557,9 +555,9 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(4, 7, 20, 0.82)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -569,68 +567,72 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
           <div className="glass-panel" style={{
             maxWidth: '460px',
             width: '100%',
-            padding: '32px',
-            background: 'var(--bg-card)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(239, 68, 68, 0.25)',
-            borderRadius: '20px'
+            padding: '30px',
+            background: '#ffffff',
+            border: '1px solid #fee2e2',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
+            borderRadius: '24px'
           }}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '38px', marginBottom: '10px' }}>🔒</div>
-              <h3 style={{ fontSize: '20px', fontFamily: 'var(--font-heading)', color: '#fff', margin: '0 0 8px 0' }}>
+            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+              <div className="card-top-icon-circle" style={{ background: '#fee2e2', color: '#dc2626', width: '52px', height: '52px', fontSize: '24px', margin: '0 auto 10px auto' }}>
+                🔒
+              </div>
+              <span className="accent-badge-pill" style={{ color: '#dc2626' }}>— SECURITY VERIFICATION —</span>
+              <h3 style={{ fontSize: '19px', fontFamily: 'var(--font-heading)', color: '#0f172a', fontWeight: '800', margin: '4px 0 6px 0' }}>
                 {securityModal.title}
               </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.5' }}>
+              <p style={{ color: '#64748b', fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
                 {securityModal.description}
               </p>
             </div>
 
             {securityModal.error && (
-              <div className="error-message" style={{ marginBottom: '16px', fontSize: '13px' }}>
+              <div className="error-message alert-pop" style={{ marginBottom: '16px', fontSize: '13px' }}>
                 ⚠️ {securityModal.error}
               </div>
             )}
 
-            <form onSubmit={handleConfirmSecurityAction}>
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                  Admin Password
-                </label>
-                <input
-                  type="password"
-                  value={securityModal.inputPassword}
-                  onChange={(e) => setSecurityModal(prev => ({ ...prev, inputPassword: e.target.value }))}
-                  placeholder="Enter cse@vfstr..."
-                  autoFocus
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    background: 'rgba(5, 8, 20, 0.8)',
-                    color: '#fff',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
+            <form onSubmit={handleConfirmSecurityAction} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="pill-typebox-wrapper">
+                <div className="typebox-left-icon" style={{ background: '#fee2e2', color: '#dc2626' }}>🔒</div>
+                <div className="typebox-content">
+                  <label htmlFor="modalAdminPassword" className="typebox-label">Admin Security Password</label>
+                  <input
+                    id="modalAdminPassword"
+                    type="password"
+                    value={securityModal.inputPassword}
+                    onChange={(e) => setSecurityModal(prev => ({ ...prev, inputPassword: e.target.value }))}
+                    placeholder="••••••••••••"
+                    autoFocus
+                    required
+                  />
+                </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
                 <button
                   type="button"
                   onClick={handleCloseSecurityModal}
                   className="btn btn-outline"
                   disabled={securityModal.isProcessing}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, padding: '11px', borderRadius: '14px' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-danger"
+                  className="btn"
                   disabled={securityModal.isProcessing}
-                  style={{ flex: 1, fontWeight: '700' }}
+                  style={{
+                    flex: 1,
+                    padding: '11px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: '#ffffff',
+                    fontWeight: '700',
+                    border: 'none',
+                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)'
+                  }}
                 >
                   {securityModal.isProcessing ? 'Verifying...' : 'Confirm & Execute'}
                 </button>
