@@ -704,43 +704,91 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
         </div>
       )}
 
-      <div className="dashboard-grid">
-        {/* Left Column: Scanner Profile */}
-        <div className="grid-col-left">
-          <div className="glass-panel profile-panel">
-            <div className="profile-header">
-              <span className={`role-badge ${currentUserRole}`}>
-                {currentUserRole === 'visitor' ? 'STUDENT VISITOR' : 'FACULTY'}
-              </span>
-              <h2>{currentUser.name}</h2>
-              <span className="visitor-id-text">ID: {currentUser.id}</span>
-              {currentUserRole === 'visitor' && <span className="visitor-id-text">Mobile: {currentUser.mobile}</span>}
+      <div className="student-dashboard-container">
+        {/* Left Column: Visitor Profile & Score */}
+        <div className="dashboard-sidebar-card glass-panel">
+          <div className="profile-hero-section">
+            <div className="profile-photo-wrapper">
+              <div className="profile-leader-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>
+                {currentUserRole === 'visitor' ? '🎟️' : '🎓'}
+              </div>
+              <span className="leader-crown-badge">{currentUserRole === 'visitor' ? '⭐' : '🏛️'}</span>
             </div>
 
-            <div className="points-display-card scanner-points">
-              <span className="points-title">YOUR POINTS</span>
-              <span className="points-value glow-text-cyan">{currentUser.points}</span>
+            <div className="profile-info-block">
+              <div className="profile-badges-row">
+                <span className={`scanner-type-pill ${currentUserRole}`}>
+                  {currentUserRole === 'visitor' ? 'STUDENT VISITOR' : 'FACULTY'}
+                </span>
+                <span className="badge-team-id">{currentUser.id}</span>
+              </div>
+              <h2 className="profile-team-name">{currentUser.name}</h2>
+              {currentUser.mobile && (
+                <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '500' }}>
+                  📱 {currentUser.mobile}
+                </span>
+              )}
             </div>
-
-            <button onClick={handleLogout} className="btn btn-outline btn-block logout-btn">
-              Logout
-            </button>
           </div>
+
+          {/* Glowing Points Banner */}
+          <div className="points-display-banner">
+            <div className="points-banner-glow"></div>
+            <div className="points-banner-content">
+              <span className="points-banner-title">⚡ YOUR SCAN REWARD POINTS</span>
+              <div className="points-banner-num-row">
+                <span className="points-big-num">{currentUser.points || 0}</span>
+                <span className="points-unit-tag">PTS</span>
+              </div>
+              <span className="points-live-status">● +5 Points Per Verified Team Scan</span>
+            </div>
+          </div>
+
+          {/* Quick Guide */}
+          <div className="team-members-block">
+            <div className="members-block-header">
+              <span>🎯 How Scanning Works</span>
+            </div>
+            <div className="members-pill-list">
+              <div className="member-pill-tile">
+                <div className="member-pill-avatar">1</div>
+                <span className="member-pill-name">Scan or select any student team's QR</span>
+              </div>
+              <div className="member-pill-tile">
+                <div className="member-pill-avatar">2</div>
+                <span className="member-pill-name">A 4-digit code will appear on your screen</span>
+              </div>
+              <div className="member-pill-tile">
+                <div className="member-pill-avatar">3</div>
+                <span className="member-pill-name">Give code to team leader to collect <strong>+5 PTS</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <button onClick={handleLogout} className="btn-logout-pill">
+            <span>🔒</span>
+            <span>Logout Portal</span>
+          </button>
         </div>
 
-        {/* Right Column: Scan Operations */}
-        <div className="grid-col-right">
-          {/* Scanner Card */}
-          <div className="glass-panel scanner-card-panel">
-            <div className="panel-header">
-              <h3>Scan Team QR Code</h3>
-              <p>Scan a team's code to reward them and earn 5 points for yourself.</p>
+        {/* Right Column: QR Scanner & Scan Feed */}
+        <div className="dashboard-main-content">
+          {/* Scanner Interactive Card */}
+          <div className="qr-presentation-card glass-panel">
+            <div className="panel-header-inline">
+              <div className="panel-header-icon-box">
+                <span>📷</span>
+              </div>
+              <div>
+                <h3>Scan Team QR Code</h3>
+                <p>Scan a team's code to reward them (+10 pts) and earn 5 points for yourself.</p>
+              </div>
             </div>
 
-            {scanError && <div className="error-message alert-pop">{scanError}</div>}
+            {scanError && <div className="error-message alert-pop" style={{ marginBottom: '16px' }}>{scanError}</div>}
 
-            <div className="scan-options-container">
-              {/* Start Camera Trigger Button */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Primary Camera Button */}
               <button 
                 onClick={() => {
                   if (cameraActive) {
@@ -749,91 +797,116 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
                     setShowCameraPrompt(true);
                   }
                 }}
-                className={`btn ${cameraActive ? 'btn-danger' : 'btn-primary'} btn-block`}
-                style={{ fontSize: '15px', padding: '12px' }}
+                className="btn btn-pill-action"
+                style={{
+                  background: cameraActive 
+                    ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                    : 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #8b5cf6 100%)'
+                }}
                 disabled={isScanning}
               >
-                {cameraActive ? '🛑 Close Camera Scanner' : '📷 Scan Student QR Code (Camera)'}
+                <span className="btn-icon-sq">{cameraActive ? '🛑' : '📷'}</span>
+                <span className="btn-text-main">
+                  {cameraActive ? 'Close Camera Scanner' : 'Launch Camera Scanner'}
+                </span>
+                <span className="btn-arrow-right">→</span>
               </button>
 
               {cameraActive && (
                 <div className="network-warning-box" style={{ 
-                  background: 'rgba(245, 158, 11, 0.1)', 
-                  border: '1px solid rgba(245, 158, 11, 0.3)',
-                  color: '#fcd34d',
+                  background: '#fef3c7', 
+                  border: '1px solid #fde68a',
+                  color: '#92400e',
                   padding: '10px 14px',
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   fontSize: '12px',
                   textAlign: 'left'
                 }}>
-                  ⚠️ <strong>Notice:</strong> Modern browsers require a secure HTTPS connection to access the webcam over network IP addresses. If the camera doesn't start, please test on <strong>localhost</strong> or use the manual select fields below.
+                  ⚠️ <strong>Camera Tip:</strong> If the webcam doesn't open over local Wi-Fi, use the manual quick-select or ID options below.
                 </div>
               )}
 
-              {/* Virtual Scanner / Live Camera View */}
-              <div className="virtual-scanner-screen" style={{ minHeight: cameraActive ? '300px' : 'auto' }}>
+              {/* Camera view or Viewfinder Frame */}
+              <div className="virtual-scanner-screen" style={{ minHeight: cameraActive ? '280px' : 'auto' }}>
                 {cameraActive ? (
                   <div id="qr-camera-view" style={{ 
                     width: '100%', 
-                    maxWidth: '400px', 
-                    borderRadius: '12px', 
+                    maxWidth: '380px', 
+                    margin: '0 auto',
+                    borderRadius: '16px', 
                     overflow: 'hidden', 
-                    border: '1px solid var(--glass-border)',
-                    boxShadow: '0 0 20px rgba(6, 182, 212, 0.2)'
+                    border: '2px solid #6366f1',
+                    boxShadow: '0 8px 25px rgba(99, 102, 241, 0.2)'
                   }}></div>
                 ) : (
-                  <div className="scanner-frame">
-                    <div className="scanner-laser"></div>
-                    <div className="scanner-overlay-text">
+                  <div className="scanner-frame" style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '16px', padding: '16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '28px', marginBottom: '4px' }}>📡</div>
+                    <div style={{ fontFamily: 'var(--font-tech)', fontSize: '12px', fontWeight: '800', color: '#6366f1', letterSpacing: '1px' }}>
                       {isScanning ? 'TRANSMITTING SCAN DATA...' : 'READY FOR SCAN'}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Form Option 1: Dropdown selector (Highly recommended for local testing) */}
-              <div className="scan-method-block">
-                <h4>Method 1: Quick Scan Selector (For evaluation/testing)</h4>
-                <div className="scan-selector-row">
-                  <select 
-                    value={selectedTeamId} 
-                    onChange={(e) => setSelectedTeamId(e.target.value)}
-                    className="scan-select"
-                  >
-                    <option value="">-- Select Student Team --</option>
-                    {teams.map(team => (
-                      <option key={team.id} value={team.id}>
-                        {team.name} ({team.id})
-                      </option>
-                    ))}
-                  </select>
+              {/* Option 1: Dropdown Selector */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '16px', textAlign: 'left' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '8px' }}>
+                  Option 1: Quick Squad Selector
+                </span>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div className="pill-typebox-wrapper" style={{ flex: 1, minWidth: '220px', margin: 0 }}>
+                    <div className="typebox-left-icon">👥</div>
+                    <div className="typebox-content">
+                      <label className="typebox-label">Select Registered Squad</label>
+                      <select 
+                        value={selectedTeamId} 
+                        onChange={(e) => setSelectedTeamId(e.target.value)}
+                      >
+                        <option value="">-- Choose Team --</option>
+                        {teams.map(team => (
+                          <option key={team.id} value={team.id}>
+                            {team.name} ({team.id})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   <button 
                     onClick={() => handleScanTeam(selectedTeamId)}
-                    className="btn btn-primary"
-                    disabled={isScanning}
+                    className="btn btn-pill-action"
+                    style={{ width: 'auto', padding: '10px 20px', marginTop: 0 }}
+                    disabled={isScanning || !selectedTeamId}
                   >
-                    Simulate Scan
+                    <span>⚡ Scan Squad</span>
                   </button>
                 </div>
               </div>
 
-              {/* Form Option 2: Manual Text Input */}
-              <div className="scan-method-block">
-                <h4>Method 2: Scan by Team ID Input</h4>
-                <form onSubmit={(e) => { e.preventDefault(); handleScanTeam(manualTeamId); }} className="scan-input-row">
-                  <input 
-                    type="text" 
-                    value={manualTeamId}
-                    onChange={(e) => setManualTeamId(e.target.value)}
-                    placeholder="Enter Team ID (e.g. T-1001)"
-                    className="scan-text-input"
-                  />
+              {/* Option 2: Manual Text Input */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '16px', textAlign: 'left' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '8px' }}>
+                  Option 2: Scan by Team ID
+                </span>
+                <form onSubmit={(e) => { e.preventDefault(); handleScanTeam(manualTeamId); }} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div className="pill-typebox-wrapper" style={{ flex: 1, minWidth: '220px', margin: 0 }}>
+                    <div className="typebox-left-icon">🪪</div>
+                    <div className="typebox-content">
+                      <label className="typebox-label">Team ID Number</label>
+                      <input 
+                        type="text" 
+                        value={manualTeamId}
+                        onChange={(e) => setManualTeamId(e.target.value)}
+                        placeholder="Enter Team ID (e.g. T-1001)"
+                      />
+                    </div>
+                  </div>
                   <button 
                     type="submit" 
-                    className="btn btn-primary"
-                    disabled={isScanning}
+                    className="btn btn-pill-action"
+                    style={{ width: 'auto', padding: '10px 20px', marginTop: 0 }}
+                    disabled={isScanning || !manualTeamId}
                   >
-                    Scan ID
+                    <span>⚡ Scan ID</span>
                   </button>
                 </form>
               </div>
@@ -841,34 +914,47 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
           </div>
 
           {/* History Card */}
-          <div className="glass-panel history-panel">
-            <div className="panel-header">
-              <h3>Your Scanning Log</h3>
-              <p>List of student teams you have successfully scanned.</p>
+          <div className="scan-history-card glass-panel">
+            <div className="panel-header-inline">
+              <div className="panel-header-icon-box history">
+                <span>📜</span>
+              </div>
+              <div>
+                <h3>Your Verified Scan Log</h3>
+                <p>Teams you have successfully scanned and awarded points to.</p>
+              </div>
             </div>
 
-            <div className="history-list">
+            <div className="scan-history-feed">
               {myHistory.length === 0 ? (
-                <div className="empty-state">
-                  <p>You haven't successfully scanned any teams yet.</p>
+                <div className="empty-history-state">
+                  <div className="empty-icon-circle">📡</div>
+                  <h4>No Scans Yet</h4>
+                  <p>Scan your first student team above to collect reward points!</p>
                 </div>
               ) : (
-                myHistory.map((scan) => (
-                  <div key={scan.id} className="history-item fade-in-list">
-                    <div className="history-info">
-                      <div className="history-title-row">
-                        <span className="scanner-name">Scanned: {teams.find(t => t.id === scan.teamId)?.name || scan.teamId}</span>
-                        <span className="scanner-badge team-id-badge-small">{scan.teamId}</span>
+                myHistory.map((scan) => {
+                  const teamObj = teams.find(t => t.id === scan.teamId);
+                  return (
+                    <div key={scan.id} className="scan-feed-item fade-in-list">
+                      <div className="scan-feed-avatar">
+                        👥
                       </div>
-                      <span className="history-time">
-                        {new Date(scan.approvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      </span>
+                      <div className="scan-feed-details">
+                        <div className="scan-feed-top-row">
+                          <span className="scanner-name-text">{teamObj?.name || scan.teamId}</span>
+                          <span className="badge-team-id">{scan.teamId}</span>
+                        </div>
+                        <span className="scan-timestamp-text">
+                          🕒 {new Date(scan.approvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • Awarded
+                        </span>
+                      </div>
+                      <div className="scan-points-badge">
+                        +5 PTS
+                      </div>
                     </div>
-                    <div className="history-points">
-                      +5 pts
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

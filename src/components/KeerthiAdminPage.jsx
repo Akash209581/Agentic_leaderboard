@@ -9,6 +9,7 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
   // Login form state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
   // Event creation state
@@ -140,105 +141,85 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
   // If not authenticated, render Admin Login screen
   if (!isAuthenticated) {
     return (
-      <div className="keerthi-admin-login-wrapper fade-in">
-        <div className="keerthi-admin-card glass-panel">
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ fontSize: '42px', marginBottom: '8px' }}>🛡️</div>
-            <span className="keerthi-admin-badge">ADMINISTRATOR ACCESS</span>
-            <h2 style={{ marginTop: '12px', fontSize: '24px', fontFamily: 'var(--font-tech)' }}>
-              Keerthi MAM Admin Portal
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '6px' }}>
-              Please enter your authorized administrative credentials to access event management & system database tools.
-            </p>
+      <div className="fade-in">
+        <div className="glass-panel registration-box">
+          <div className="card-top-icon-circle">
+            <span>🛡️</span>
+          </div>
+          <div className="panel-header">
+            <span className="accent-badge-pill">— ADMINISTRATOR ACCESS —</span>
+            <h2>Keerthi MAM Admin Portal</h2>
+            <p>Please enter your authorized credentials to access event management & system database tools.</p>
           </div>
 
           {authError && (
-            <div className="error-message" style={{ marginBottom: '16px', fontSize: '13px' }}>
+            <div className="error-message alert-pop" style={{ marginBottom: '16px' }}>
               ⚠️ {authError}
             </div>
           )}
 
-          <form onSubmit={handleLogin}>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Admin Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. Keerthi MAM"
-                required
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--glass-border)',
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              />
+          <form onSubmit={handleLogin} className="registration-form">
+            <div className="pill-typebox-wrapper">
+              <div className="typebox-left-icon">👤</div>
+              <div className="typebox-content">
+                <label htmlFor="adminUsername" className="typebox-label">Admin Username</label>
+                <input
+                  id="adminUsername"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. Keerthi MAM"
+                  required
+                />
+              </div>
+              <div className="typebox-right-icon">🪪</div>
             </div>
 
-            <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password..."
-                required
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--glass-border)',
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{
-                width: '100%',
-                padding: '14px',
-                fontSize: '15px',
-                fontWeight: '700',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, var(--accent-purple), var(--accent-blue))'
-              }}
-            >
-              🔓 Unlock Admin Dashboard
-            </button>
-          </form>
-
-          {onExit && (
-            <div style={{ textAlign: 'center', marginTop: '20px' }}>
-              <button
-                onClick={onExit}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-dim)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  textDecoration: 'underline'
-                }}
+            <div className="pill-typebox-wrapper">
+              <div className="typebox-left-icon">🔒</div>
+              <div className="typebox-content">
+                <label htmlFor="adminPassword" className="typebox-label">Password</label>
+                <input
+                  id="adminPassword"
+                  type={showAdminPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter administrator password"
+                  required
+                />
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowAdminPassword(!showAdminPassword)} 
+                className="typebox-right-btn"
+                title="Toggle password visibility"
               >
-                ← Return to Public Portal
+                {showAdminPassword ? '🙈' : '👁️'}
               </button>
             </div>
-          )}
+
+            <button type="submit" className="btn btn-pill-action btn-block">
+              <span className="btn-icon-sq">🔓</span>
+              <span className="btn-text-main">Unlock Admin Dashboard</span>
+              <span className="btn-arrow-right">→</span>
+            </button>
+
+            {onExit && (
+              <div className="card-footer-links" style={{ marginTop: '14px' }}>
+                <button
+                  type="button"
+                  onClick={onExit}
+                  className="footer-link-btn"
+                >
+                  <span>←</span> Return to Public Portal
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+
+        <div className="secure-badge-note">
+          <span>🛡️</span> Secure Admin Gateway • Encrypted Session Protection
         </div>
       </div>
     );
