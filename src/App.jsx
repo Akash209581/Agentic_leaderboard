@@ -3,10 +3,17 @@ import { useLocalStorageSync } from './hooks/useLocalStorageSync';
 import StudentPage from './components/StudentPage';
 import VisitorPage from './components/VisitorPage';
 import AdminPage from './components/AdminPage';
+import FullScreenLeaderboard from './components/FullScreenLeaderboard';
 
 export default function App() {
-  const { teams, visitors, faculty, scans } = useLocalStorageSync();
+  const { teams, visitors, faculty, scans, events } = useLocalStorageSync();
   const [activeTab, setActiveTab] = useState('student');
+
+  const isFullScreenLeaderboard = typeof window !== 'undefined' && window.location.search.includes('view=leaderboard');
+
+  if (isFullScreenLeaderboard) {
+    return <FullScreenLeaderboard teams={teams} visitors={visitors} faculty={faculty} scans={scans} events={events} />;
+  }
 
   return (
     <div className="app-container">
@@ -51,6 +58,7 @@ export default function App() {
           <StudentPage 
             teams={teams} 
             scans={scans} 
+            events={events}
           />
         )}
         
@@ -69,6 +77,7 @@ export default function App() {
             visitors={visitors} 
             faculty={faculty} 
             scans={scans} 
+            events={events}
           />
         )}
       </main>

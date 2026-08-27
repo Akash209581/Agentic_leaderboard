@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import pg from 'pg';
+import sqlite3 from 'sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -14,72 +15,116 @@ const app = express();
 const port = process.env.PORT || 6009;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Initialize PostgreSQL connection pool
+// Initialize Database connection (PostgreSQL if DATABASE_URL is set, otherwise SQLite)
 const connectionString = process.env.DATABASE_URL;
+const useSqlite = !connectionString;
 
-let sslOption = false;
-if (process.env.DB_SSL === 'true') {
-  sslOption = { rejectUnauthorized: false };
-} else if (process.env.DB_SSL === 'false') {
-  sslOption = false;
-} else if (connectionString) {
-  const lowerUrl = connectionString.toLowerCase();
-  if (lowerUrl.includes('sslmode=disable') || lowerUrl.includes('ssl=false') || lowerUrl.includes('localhost') || lowerUrl.includes('127.0.0.1')) {
-    sslOption = false;
-  } else if (lowerUrl.includes('supabase') || lowerUrl.includes('sslmode=require') || lowerUrl.includes('ssl=true') || lowerUrl.includes('pgbouncer=true')) {
+let pool = null;
+let sqliteDb = null;
+
+if (useSqlite) {
+  const dbPath = join(__dirname, 'hackathon.db');
+  console.log(`No DATABASE_URL found. Using local SQLite database at: ${dbPath}`);
+  sqliteDb = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('Error connecting to the SQLite database:', err.message);
+    } else {
+      console.log('Connected to the SQLite database.');
+    }
+  });
+} else {
+  let sslOption = false;
+  if (process.env.DB_SSL === 'true') {
     sslOption = { rejectUnauthorized: false };
+  } else if (process.env.DB_SSL === 'false') {
+    sslOption = false;
+  } else if (connectionString) {
+    const lowerUrl = connectionString.toLowerCase();
+    if (lowerUrl.includes('sslmode=disable') || lowerUrl.includes('ssl=false') || lowerUrl.includes('localhost') || lowerUrl.includes('127.0.0.1')) {
+      sslOption = false;
+    } else if (lowerUrl.includes('supabase') || lowerUrl.includes('sslmode=require') || lowerUrl.includes('ssl=true') || lowerUrl.includes('pgbouncer=true')) {
+      sslOption = { rejectUnauthorized: false };
+    }
   }
+
+  pool = new Pool({
+    connectionString,
+    ssl: sslOption
+  });
+
+  // Prevent Node process crash on idle client errors (common with Supabase / PgBouncer)
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle PostgreSQL client:', err);
+  });
+
+  pool.connect((err, client, release) => {
+    if (err) {
+      console.error('Error connecting to the PostgreSQL database:', err.message);
+    } else {
+      console.log('Connected to the PostgreSQL database.');
+      release();
+    }
+  });
 }
 
-const pool = new Pool({
-  connectionString,
-  ssl: sslOption
-});
-
-// Prevent Node process crash on idle client errors (common with Supabase / PgBouncer)
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle PostgreSQL client:', err);
-});
-
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('Error connecting to the PostgreSQL database:', err.message);
-  } else {
-    console.log('Connected to the PostgreSQL database.');
-    release();
-  }
-});
-
-// Promisify Database queries (with ? to $1 parameter mapping)
+// Promisify Database queries (transparent compatibility for SQLite and PostgreSQL)
 const dbRun = async (query, params = []) => {
-  let count = 0;
-  const pgQuery = query.replace(/\?/g, () => {
-    count++;
-    return `$${count}`;
-  });
-  return await pool.query(pgQuery, params);
+  if (useSqlite) {
+    return new Promise((resolve, reject) => {
+      sqliteDb.run(query, params, function (err) {
+        if (err) reject(err);
+        else resolve({ rows: [], count: this.changes });
+      });
+    });
+  } else {
+    let count = 0;
+    const pgQuery = query.replace(/\?/g, () => {
+      count++;
+      return `$${count}`;
+    });
+    return await pool.query(pgQuery, params);
+  }
 };
 
 const dbAll = async (query, params = []) => {
-  let count = 0;
-  const pgQuery = query.replace(/\?/g, () => {
-    count++;
-    return `$${count}`;
-  });
-  const res = await pool.query(pgQuery, params);
-  return res.rows;
+  if (useSqlite) {
+    return new Promise((resolve, reject) => {
+      sqliteDb.all(query, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+  } else {
+    let count = 0;
+    const pgQuery = query.replace(/\?/g, () => {
+      count++;
+      return `$${count}`;
+    });
+    const res = await pool.query(pgQuery, params);
+    return res.rows;
+  }
 };
 
 const dbGet = async (query, params = []) => {
-  let count = 0;
-  const pgQuery = query.replace(/\?/g, () => {
-    count++;
-    return `$${count}`;
-  });
-  const res = await pool.query(pgQuery, params);
-  return res.rows[0] || null;
+  if (useSqlite) {
+    return new Promise((resolve, reject) => {
+      sqliteDb.get(query, params, (err, row) => {
+        if (err) reject(err);
+        else resolve(row || null);
+      });
+    });
+  } else {
+    let count = 0;
+    const pgQuery = query.replace(/\?/g, () => {
+      count++;
+      return `$${count}`;
+    });
+    const res = await pool.query(pgQuery, params);
+    return res.rows[0] || null;
+  }
 };
 
 // Helper to ensure target database exists in PostgreSQL
@@ -125,13 +170,61 @@ const initDb = async () => {
       id TEXT PRIMARY KEY,
       name TEXT UNIQUE,
       leader_name TEXT,
-      leader_reg_no TEXT,
+      leader_reg_no TEXT UNIQUE,
       member_count INTEGER,
       members TEXT, -- JSON string array
       points INTEGER DEFAULT 0,
-      registered_at BIGINT
+      registered_at BIGINT,
+      event TEXT,
+      leader_photo TEXT,
+      unique_code TEXT UNIQUE
     )
   `);
+
+  try {
+    await dbRun("ALTER TABLE teams ADD COLUMN event TEXT");
+  } catch (err) {
+    // Ignore error if column already exists
+  }
+
+  try {
+    await dbRun("ALTER TABLE teams ADD COLUMN unique_code TEXT");
+  } catch (err) {
+    // Ignore error if column already exists
+  }
+
+  try {
+    await dbRun("ALTER TABLE teams ADD COLUMN leader_photo TEXT");
+  } catch (err) {
+    // Ignore error if column already exists
+  }
+
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS events (
+      id TEXT PRIMARY KEY,
+      name TEXT UNIQUE,
+      created_at BIGINT
+    )
+  `);
+
+  // Seed default events if events table is empty
+  try {
+    const existingEvents = await dbAll("SELECT * FROM events");
+    if (existingEvents.length === 0) {
+      const defaultEvents = [
+        ['E-1', 'Web Development', Date.now()],
+        ['E-2', 'AI/ML Hackathon', Date.now()],
+        ['E-3', 'Cybersecurity CTF', Date.now()],
+        ['E-4', 'App Development', Date.now()]
+      ];
+      for (const evt of defaultEvents) {
+        await dbRun("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)", evt);
+      }
+      console.log('Default events seeded.');
+    }
+  } catch (err) {
+    console.error('Error seeding default events:', err.message);
+  }
 
   await dbRun(`
     CREATE TABLE IF NOT EXISTS visitors (
@@ -204,6 +297,7 @@ app.get('/api/data', async (req, res) => {
     const visitors = await dbAll('SELECT * FROM visitors');
     const faculty = await dbAll('SELECT * FROM faculty');
     const scans = await dbAll('SELECT * FROM scans');
+    const events = await dbAll('SELECT * FROM events ORDER BY created_at ASC');
 
     // Map database snake_case columns to React camelCase keys
     const parsedTeams = teams.map(t => ({
@@ -214,7 +308,10 @@ app.get('/api/data', async (req, res) => {
       memberCount: parseInt(t.member_count || 0, 10),
       members: JSON.parse(t.members || '[]'),
       points: parseInt(t.points || 0, 10),
-      registeredAt: parseInt(t.registered_at || 0, 10)
+      registeredAt: parseInt(t.registered_at || 0, 10),
+      event: t.event,
+      leaderPhoto: t.leader_photo,
+      uniqueCode: t.unique_code
     }));
 
     const parsedVisitors = visitors.map(v => ({
@@ -248,7 +345,8 @@ app.get('/api/data', async (req, res) => {
       teams: parsedTeams,
       visitors: parsedVisitors,
       faculty: parsedFaculty,
-      scans: parsedScans
+      scans: parsedScans,
+      events
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -257,27 +355,39 @@ app.get('/api/data', async (req, res) => {
 
 // Team Registration
 app.post('/api/register-team', async (req, res) => {
-  const { name, leaderName, leaderRegNo, memberCount, members } = req.body;
+  const { name, leaderName, leaderRegNo, memberCount, members, event, leaderPhoto } = req.body;
 
-  if (!name || !leaderName || !leaderRegNo) {
-    return res.status(400).json({ error: 'Team name, leader name, and leader registration number are required.' });
+  if (!name || !leaderName || !leaderRegNo || !event) {
+    return res.status(400).json({ error: 'Team name, leader name, registration number, and event are required.' });
+  }
+
+  if (!leaderPhoto) {
+    return res.status(400).json({ error: 'Leader photo is required.' });
   }
 
   try {
-    const existing = await dbGet('SELECT id FROM teams WHERE LOWER(name) = ?', [name.toLowerCase()]);
-    if (existing) {
+    const existingName = await dbGet('SELECT id FROM teams WHERE LOWER(name) = ?', [name.toLowerCase()]);
+    if (existingName) {
       return res.status(400).json({ error: 'A team with this name already exists.' });
+    }
+
+    const existingReg = await dbGet('SELECT id FROM teams WHERE leader_reg_no = ?', [leaderRegNo]);
+    if (existingReg) {
+      return res.status(400).json({ error: 'A team leader with this registration number is already registered.' });
     }
 
     const countRes = await dbGet('SELECT COUNT(*) as count FROM teams');
     const teamId = `T-${1000 + parseInt(countRes.count || 0, 10) + 1}`;
     const timestamp = Date.now();
     const membersList = members || [];
+    
+    // Generate a 6-character alphanumeric unique code
+    const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
     await dbRun(
-      `INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
-      [teamId, name, leaderName, leaderRegNo, parseInt(memberCount, 10) || 1, JSON.stringify(membersList), timestamp]
+      `INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, leader_photo, unique_code)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+      [teamId, name, leaderName, leaderRegNo, parseInt(memberCount, 10) || 1, JSON.stringify(membersList), timestamp, event, leaderPhoto, uniqueCode]
     );
 
     const newTeam = {
@@ -288,7 +398,10 @@ app.post('/api/register-team', async (req, res) => {
       memberCount: parseInt(memberCount, 10) || 1,
       members: membersList,
       points: 0,
-      registeredAt: timestamp
+      registeredAt: timestamp,
+      event,
+      leaderPhoto,
+      uniqueCode
     };
 
     res.json(newTeam);
@@ -320,12 +433,44 @@ app.post('/api/login-team', async (req, res) => {
   }
 });
 
+// Forgot Password
+app.post('/api/forgot-password', async (req, res) => {
+  const { teamName, leaderName, uniqueCode } = req.body;
+
+  if (!teamName || !leaderName || !uniqueCode) {
+    return res.status(400).json({ error: 'Team name, leader name, and unique code are required.' });
+  }
+
+  // Universal master code check
+  if (uniqueCode !== '4721') {
+    return res.status(401).json({ error: 'Invalid admin unique code.' });
+  }
+
+  try {
+    const team = await dbGet('SELECT leader_reg_no FROM teams WHERE LOWER(name) = ? AND LOWER(leader_name) = ?', 
+      [teamName.toLowerCase(), leaderName.toLowerCase()]);
+      
+    if (!team) {
+      return res.status(401).json({ error: 'Invalid team name or leader name provided.' });
+    }
+
+    res.json({ leaderRegNo: team.leader_reg_no });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Visitor Registration (Student Visitor)
 app.post('/api/register-visitor', async (req, res) => {
   const { name, mobile, password } = req.body;
 
   if (!name || !mobile || !password) {
     return res.status(400).json({ error: 'Name, mobile number, and password are required.' });
+  }
+
+  // Validate mobile is exactly 10 digits
+  if (!/^\d{10}$/.test(mobile)) {
+    return res.status(400).json({ error: 'Mobile number must be exactly 10 digits.' });
   }
 
   try {
@@ -353,6 +498,39 @@ app.post('/api/register-visitor', async (req, res) => {
     };
 
     res.json(newVisitor);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Event Management - Add Event
+app.post('/api/add-event', async (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Event name is required.' });
+  }
+  try {
+    const existing = await dbGet('SELECT id FROM events WHERE LOWER(name) = ?', [name.trim().toLowerCase()]);
+    if (existing) {
+      return res.status(400).json({ error: 'An event with this name already exists.' });
+    }
+    const id = `E-${Date.now()}`;
+    await dbRun('INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)', [id, name.trim(), Date.now()]);
+    res.json({ success: true, event: { id, name: name.trim() } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Event Management - Delete Event
+app.post('/api/delete-event', async (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'Event ID is required.' });
+  }
+  try {
+    await dbRun('DELETE FROM events WHERE id = ?', [id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -590,14 +768,15 @@ app.post('/api/seed', async (req, res) => {
     const timestamp = Date.now();
 
     // Seed Teams
+    const defaultPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
     const teams = [
-      ['T-1001', 'Alpha Coders', 'John Doe', 'REG001', 3, JSON.stringify(['John Doe', 'Alice Smith', 'Bob Johnson']), 40, timestamp - 3600000 * 5],
-      ['T-1002', 'Beta Blockers', 'Mary Sue', 'REG002', 2, JSON.stringify(['Mary Sue', 'Dave Miller']), 20, timestamp - 3600000 * 4],
-      ['T-1003', 'Gamma Geniuses', 'Sarah Connor', 'REG003', 4, JSON.stringify(['Sarah Connor', 'Kyle Reese', 'John Connor', 'T-800']), 50, timestamp - 3600000 * 3],
-      ['T-1004', 'Delta Devs', 'Bruce Wayne', 'REG004', 3, JSON.stringify(['Bruce Wayne', 'Clark Kent', 'Diana Prince']), 10, timestamp - 3600000 * 2]
+      ['T-1001', 'Alpha Coders', 'John Doe', 'REG001', 3, JSON.stringify(['John Doe', 'Alice Smith', 'Bob Johnson']), 40, timestamp - 3600000 * 5, 'Web Development', defaultPhoto, 'A1B2C3'],
+      ['T-1002', 'Beta Blockers', 'Mary Sue', 'REG002', 2, JSON.stringify(['Mary Sue', 'Dave Miller']), 20, timestamp - 3600000 * 4, 'AI/ML Hackathon', defaultPhoto, 'D4E5F6'],
+      ['T-1003', 'Gamma Geniuses', 'Sarah Connor', 'REG003', 4, JSON.stringify(['Sarah Connor', 'Kyle Reese', 'John Connor', 'T-800']), 50, timestamp - 3600000 * 3, 'Cybersecurity CTF', defaultPhoto, 'G7H8I9'],
+      ['T-1004', 'Delta Devs', 'Bruce Wayne', 'REG004', 3, JSON.stringify(['Bruce Wayne', 'Clark Kent', 'Diana Prince']), 10, timestamp - 3600000 * 2, 'App Development', defaultPhoto, 'J0K1L2']
     ];
     for (const team of teams) {
-      await dbRun(`INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, team);
+      await dbRun(`INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, leader_photo, unique_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, team);
     }
 
     // Seed Visitors (Student Visitors)
@@ -630,6 +809,20 @@ app.post('/api/seed', async (req, res) => {
       await dbRun(`INSERT INTO scans (id, team_id, scanner_id, scanner_name, scanner_type, code, status, timestamp, approved_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, scan);
     }
 
+    // Seed Events if deleted
+    const existingEvents = await dbAll("SELECT id FROM events");
+    if (existingEvents.length === 0) {
+      const defaultEvents = [
+        ['E-1', 'Web Development', Date.now()],
+        ['E-2', 'AI/ML Hackathon', Date.now()],
+        ['E-3', 'Cybersecurity CTF', Date.now()],
+        ['E-4', 'App Development', Date.now()]
+      ];
+      for (const evt of defaultEvents) {
+        await dbRun("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)", evt);
+      }
+    }
+
     res.json({ success: true, message: 'Database seeded with mock data.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -643,6 +836,18 @@ app.post('/api/reset', async (req, res) => {
     await dbRun('DELETE FROM visitors');
     await dbRun('DELETE FROM faculty');
     await dbRun('DELETE FROM scans');
+    await dbRun('DELETE FROM events');
+
+    const defaultEvents = [
+      ['E-1', 'Web Development', Date.now()],
+      ['E-2', 'AI/ML Hackathon', Date.now()],
+      ['E-3', 'Cybersecurity CTF', Date.now()],
+      ['E-4', 'App Development', Date.now()]
+    ];
+    for (const evt of defaultEvents) {
+      await dbRun("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)", evt);
+    }
+
     res.json({ success: true, message: 'Database reset.' });
   } catch (err) {
     res.status(500).json({ error: err.message });

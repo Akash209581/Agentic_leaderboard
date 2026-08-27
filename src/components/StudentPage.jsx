@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { registerTeam, loginTeam, approveScan, rejectScan } from '../utils/db';
+import { registerTeam, loginTeam, approveScan, rejectScan, forgotPasswordTeam } from '../utils/db';
 
-export default function StudentPage({ teams, scans }) {
+export default function StudentPage({ teams, scans, events = [] }) {
   const [currentTeamId, setCurrentTeamId] = useState(() => {
     return localStorage.getItem('current_student_team_id') || null;
   });
+
+  const [teamEvent, setTeamEvent] = useState('');
+  const [leaderPhoto, setLeaderPhoto] = useState('');
+  const [photoError, setPhotoError] = useState('');
 
   const currentTeam = teams.find(t => t.id === currentTeamId) || null;
 
   // Toggle between Login and Registration views
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
 
   // Login Form State
   const [loginTeamName, setLoginTeamName] = useState('');
@@ -29,11 +34,20 @@ export default function StudentPage({ teams, scans }) {
   const [approvalError, setApprovalError] = useState('');
   const [approvalSuccess, setApprovalSuccess] = useState(false);
 
+  // Forgot Password State
+  const [fpTeamName, setFpTeamName] = useState('');
+  const [fpLeaderName, setFpLeaderName] = useState('');
+  const [fpUniqueCode, setFpUniqueCode] = useState('');
+  const [fpError, setFpError] = useState('');
+  const [fpSuccessMessage, setFpSuccessMessage] = useState('');
+
   // Clear errors when toggling screens
   useEffect(() => {
     setLoginError('');
     setRegisterError('');
-  }, [isRegistering]);
+    setFpError('');
+    setFpSuccessMessage('');
+  }, [isRegistering, isForgotPassword]);
 
   const handleOtherMemberCountChange = (e) => {
     const count = parseInt(e.target.value, 10);
@@ -57,6 +71,26 @@ export default function StudentPage({ teams, scans }) {
     });
   };
 
+  const handlePhotoChange = (e) => {
+    setPhotoError('');
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setPhotoError('Image size should be less than 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLeaderPhoto(reader.result);
+    };
+    reader.onerror = () => {
+      setPhotoError('Failed to read image file.');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     setRegisterError('');
@@ -74,6 +108,16 @@ export default function StudentPage({ teams, scans }) {
       return;
     }
 
+    if (!teamEvent) {
+      setRegisterError('Event selection is required.');
+      return;
+    }
+
+    if (!leaderPhoto) {
+      setRegisterError('Leader photo is required.');
+      return;
+    }
+
     const filledOtherMembers = otherMembers.filter(m => m.trim() !== '');
     const allMembers = [leaderName.trim(), ...filledOtherMembers];
 
@@ -83,7 +127,9 @@ export default function StudentPage({ teams, scans }) {
         leaderName.trim(),
         leaderRegNo.trim(),
         filledOtherMembers.length + 1,
-        allMembers
+        allMembers,
+        teamEvent,
+        leaderPhoto
       );
       setCurrentTeamId(team.id);
       localStorage.setItem('current_student_team_id', team.id);
@@ -118,8 +164,38 @@ export default function StudentPage({ teams, scans }) {
     setLeaderRegNo('');
     setOtherMemberCount(2);
     setOtherMembers(['', '']);
+    setTeamEvent('');
+    setLeaderPhoto('');
     setLoginTeamName('');
     setLoginLeaderRegNo('');
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setFpError('');
+    setFpSuccessMessage('');
+
+    if (!fpTeamName.trim() || !fpLeaderName.trim() || !fpUniqueCode.trim()) {
+      setFpError('All fields are required.');
+      return;
+    }
+
+    try {
+      const result = await forgotPasswordTeam(fpTeamName.trim(), fpLeaderName.trim(), fpUniqueCode.trim());
+      
+      // Automatically log the user in using the retrieved registration number
+      const team = await loginTeam(fpTeamName.trim(), result.leaderRegNo);
+      setCurrentTeamId(team.id);
+      localStorage.setItem('current_student_team_id', team.id);
+      
+      // Reset FP states just in case
+      setIsForgotPassword(false);
+      setFpTeamName('');
+      setFpLeaderName('');
+      setFpUniqueCode('');
+    } catch (err) {
+      setFpError(err.message);
+    }
   };
 
   // Find if there is a pending scan for this team
@@ -227,6 +303,53 @@ export default function StudentPage({ teams, scans }) {
               </div>
 
               <div className="form-group">
+                <label htmlFor="leaderPhoto">Leader Photo (Mandatory)</label>
+                <input
+                  id="leaderPhoto"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  required
+                  style={{
+                    padding: '8px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px dashed var(--glass-border)',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                />
+                {photoError && <div style={{ color: 'var(--accent-danger)', fontSize: '11px', marginTop: '4px' }}>{photoError}</div>}
+                {leaderPhoto && (
+                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <img
+                      src={leaderPhoto}
+                      alt="Preview"
+                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--accent-tech)' }}
+                    />
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Image uploaded successfully</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="teamEvent">Select Hackathon Event</label>
+                <select
+                  id="teamEvent"
+                  value={teamEvent}
+                  onChange={(e) => setTeamEvent(e.target.value)}
+                  required
+                >
+                  <option value="">-- Choose Event --</option>
+                  {events.map(evt => (
+                    <option key={evt.id} value={evt.name}>
+                      {evt.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="otherMemberCount">Number of Additional Members</label>
                 <select
                   id="otherMemberCount"
@@ -263,8 +386,74 @@ export default function StudentPage({ teams, scans }) {
 
               <p className="toggle-auth-link">
                 Already registered your team?{' '}
-                <button type="button" onClick={() => setIsRegistering(false)}>
+                <button type="button" onClick={() => { setIsRegistering(false); setIsForgotPassword(false); }}>
                   Log In Here
+                </button>
+              </p>
+            </form>
+          </div>
+        </div>
+      );
+    }
+    
+    if (isForgotPassword) {
+      return (
+        <div className="fade-in">
+          <div className="glass-panel registration-box">
+            <div className="panel-header">
+              <span className="accent-badge">FORGOT PASSWORD</span>
+              <h2>Retrieve Registration No.</h2>
+              <p>Enter the details below and get the unique code from the Admin page to retrieve your login password.</p>
+            </div>
+
+            <form onSubmit={handleForgotPassword} className="registration-form">
+              {fpError && <div className="error-message alert-pop">{fpError}</div>}
+              {fpSuccessMessage && <div className="success-message alert-pop" style={{ color: 'var(--accent-tech)' }}>{fpSuccessMessage}</div>}
+
+              <div className="form-group">
+                <label htmlFor="fpTeamName">Team Name</label>
+                <input
+                  id="fpTeamName"
+                  type="text"
+                  value={fpTeamName}
+                  onChange={(e) => setFpTeamName(e.target.value)}
+                  placeholder="Enter registered Team Name..."
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="fpLeaderName">Team Leader Full Name</label>
+                <input
+                  id="fpLeaderName"
+                  type="text"
+                  value={fpLeaderName}
+                  onChange={(e) => setFpLeaderName(e.target.value)}
+                  placeholder="Enter team leader's name..."
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="fpUniqueCode">Unique Code</label>
+                <input
+                  id="fpUniqueCode"
+                  type="text"
+                  value={fpUniqueCode}
+                  onChange={(e) => setFpUniqueCode(e.target.value)}
+                  placeholder="Get this unique code from the Admin..."
+                  required
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary btn-block">
+                Retrieve Registration Number
+              </button>
+
+              <p className="toggle-auth-link">
+                Remembered it?{' '}
+                <button type="button" onClick={() => setIsForgotPassword(false)}>
+                  Back to Login
                 </button>
               </p>
             </form>
@@ -314,12 +503,15 @@ export default function StudentPage({ teams, scans }) {
               Login to Dashboard
             </button>
 
-            <p className="toggle-auth-link">
-              New hackathon team?{' '}
-              <button type="button" onClick={() => setIsRegistering(true)}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: '16px' }}>
+              <button type="button" onClick={() => setIsForgotPassword(true)} style={{ background: 'none', border: 'none', color: 'var(--accent-tech)', cursor: 'pointer' }}>
+                Forgot Password?
+              </button>
+              
+              <button type="button" onClick={() => { setIsRegistering(true); setIsForgotPassword(false); }} style={{ background: 'none', border: 'none', color: 'var(--accent-tech)', cursor: 'pointer' }}>
                 Register Your Team
               </button>
-            </p>
+            </div>
           </form>
         </div>
       </div>
@@ -393,9 +585,25 @@ export default function StudentPage({ teams, scans }) {
         {/* Left column: Team Profile */}
         <div className="grid-col-left">
           <div className="glass-panel profile-panel">
-            <div className="profile-header">
-              <span className="team-id-badge">{currentTeam.id}</span>
-              <h2>{currentTeam.name}</h2>
+            <div className="profile-header" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <img
+                src={currentTeam.leaderPhoto || currentTeam.leader_photo || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"}
+                alt="Leader"
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '2px solid var(--accent-tech)'
+                }}
+              />
+              <div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <span className="team-id-badge">{currentTeam.id}</span>
+                  {currentTeam.event && <span className="accent-badge" style={{ background: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-tech)', border: '1px solid rgba(6, 182, 212, 0.3)' }}>{currentTeam.event}</span>}
+                </div>
+                <h2>{currentTeam.name}</h2>
+              </div>
             </div>
 
             <div className="points-display-card">

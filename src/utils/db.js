@@ -68,12 +68,11 @@ export const getScans = async () => {
   }
 };
 
-// Team Operations
-export const registerTeam = async (name, leaderName, leaderRegNo, memberCount, members) => {
+export const registerTeam = async (name, leaderName, leaderRegNo, memberCount, members, event, leaderPhoto) => {
   const data = await safeFetch('/api/register-team', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, leaderName, leaderRegNo, memberCount, members })
+    body: JSON.stringify({ name, leaderName, leaderRegNo, memberCount, members, event, leaderPhoto })
   });
   window.dispatchEvent(new Event('local-db-update'));
   return data;
@@ -86,6 +85,16 @@ export const loginTeam = async (name, leaderRegNo) => {
     body: JSON.stringify({ name, leaderRegNo })
   });
   window.dispatchEvent(new Event('local-db-update'));
+  return data;
+};
+
+export const forgotPasswordTeam = async (teamName, leaderName, uniqueCode) => {
+  const data = await safeFetch('/api/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamName, leaderName, uniqueCode })
+  });
+  // Doesn't necessarily need a db-update broadcast unless we want to, but standard here.
   return data;
 };
 
@@ -179,6 +188,27 @@ export const clearDatabase = async () => {
   const data = await safeFetch('/api/reset', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
+  });
+  window.dispatchEvent(new Event('local-db-update'));
+  return data;
+};
+
+// Event Operations
+export const addEvent = async (name) => {
+  const data = await safeFetch('/api/add-event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  window.dispatchEvent(new Event('local-db-update'));
+  return data;
+};
+
+export const deleteEvent = async (id) => {
+  const data = await safeFetch('/api/delete-event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
   });
   window.dispatchEvent(new Event('local-db-update'));
   return data;

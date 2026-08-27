@@ -132,6 +132,11 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
       return;
     }
 
+    if (visMobile.trim().length !== 10) {
+      setVisError('Mobile number must be exactly 10 digits.');
+      return;
+    }
+
     try {
       const user = await registerVisitor(visName.trim(), visMobile.trim(), visPassword);
       setCurrentUserId(user.id);
@@ -309,6 +314,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
                   <input
                     id="visMobile"
                     type="tel"
+                    maxLength="10"
                     value={visMobile}
                     onChange={(e) => setVisMobile(e.target.value.replace(/\D/g, ''))}
                     placeholder="Enter 10-digit mobile number..."
@@ -346,6 +352,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
                   <input
                     id="visMobileLogin"
                     type="tel"
+                    maxLength="10"
                     value={visMobile}
                     onChange={(e) => setVisMobile(e.target.value.replace(/\D/g, ''))}
                     placeholder="Enter registered mobile number..."

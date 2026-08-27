@@ -1,33 +1,9 @@
 import React, { useState } from 'react';
-import { seedMockData, clearDatabase } from '../utils/db';
+import { seedMockData, clearDatabase, addEvent, deleteEvent } from '../utils/db';
 
-export default function AdminPage({ teams, visitors, faculty, scans }) {
-  // Admin Authentication State
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
-    return localStorage.getItem('is_admin_logged_in') === 'true';
-  });
-  const [adminUsername, setAdminUsername] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminError, setAdminError] = useState('');
-
-  const handleAdminLogin = (e) => {
-    e.preventDefault();
-    setAdminError('');
-
-    if (adminUsername.trim() === 'admin' && adminPassword === 'admin') {
-      setIsAdminLoggedIn(true);
-      localStorage.setItem('is_admin_logged_in', 'true');
-    } else {
-      setAdminError('Invalid Admin ID or Password.');
-    }
-  };
-
-  const handleAdminLogout = () => {
-    setIsAdminLoggedIn(false);
-    localStorage.removeItem('is_admin_logged_in');
-    setAdminUsername('');
-    setAdminPassword('');
-  };
+export default function AdminPage({ teams, visitors, faculty, scans, events = [] }) {
+  // Event Management Input State
+  const [newEventName, setNewEventName] = useState('');
 
   // Sort teams by points (highest first) and then by registration time
   const sortedTeams = [...teams].sort((a, b) => {
@@ -37,26 +13,16 @@ export default function AdminPage({ teams, visitors, faculty, scans }) {
     return a.registeredAt - b.registeredAt;
   });
 
-  // Sort visitors (student visitors) by points
-  const sortedVisitors = [...visitors].sort((a, b) => {
+  // Sort combined scanners (student visitors + faculty) by points
+  const combinedScanners = [
+    ...visitors.map(v => ({ ...v, role: 'Visitor' })),
+    ...faculty.map(f => ({ ...f, role: 'Faculty' }))
+  ].sort((a, b) => {
     if (b.points !== a.points) {
       return b.points - a.points;
     }
     return a.registeredAt - b.registeredAt;
   });
-
-  // Sort faculty by points
-  const sortedFaculty = [...faculty].sort((a, b) => {
-    if (b.points !== a.points) {
-      return b.points - a.points;
-    }
-    return a.registeredAt - b.registeredAt;
-  });
-
-  const firstPlace = sortedTeams[0] || null;
-  const secondPlace = sortedTeams[1] || null;
-  const thirdPlace = sortedTeams[2] || null;
-  const remainingTeams = sortedTeams.slice(3);
 
   const totalTeamsCount = teams.length;
   const totalVisitorsCount = visitors.length;
@@ -79,7 +45,7 @@ export default function AdminPage({ teams, visitors, faculty, scans }) {
   };
 
   const handleReset = async () => {
-    if (window.confirm('WARNING: This will permanently delete all teams, visitors, faculty, and scans from SQLite. Are you sure?')) {
+    if (window.confirm('WARNING: This will permanently delete all teams, visitors, faculty, scans, and custom events. Are you sure?')) {
       try {
         await clearDatabase();
       } catch (err) {
@@ -88,64 +54,214 @@ export default function AdminPage({ teams, visitors, faculty, scans }) {
     }
   };
 
-  // 1. Admin Login View (Unauthenticated)
-  if (!isAdminLoggedIn) {
-    return (
-      <div className="fade-in">
-        <div className="glass-panel registration-box">
-          <div className="panel-header">
-            <span className="accent-badge">ADMIN ACCESS</span>
-            <h2>Admin Management System</h2>
-            <p>Log in with your administrator ID and password to view dashboards and seed/reset database.</p>
+  const handleAddEventSubmit = async (e) => {
+    e.preventDefault();
+    if (!newEventName.trim()) return;
+    try {
+      await addEvent(newEventName.trim());
+      setNewEventName('');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteEventClick = async (id, name) => {
+    if (window.confirm(`Are you sure you want to delete event "${name}"? Registered teams in this event will remain but will not appear on any event leaderboard until reassigned.`)) {
+      try {
+        await deleteEvent(id);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+  };
+
+  // Prepare slots for the 2x2 grid (exactly 4 boxes)
+  const boxSlots = [];
+
+  // Add event leaderboards up to Box 3
+  events.forEach((evt) => {
+    if (boxSlots.length < 3) {
+      boxSlots.push({
+        type: 'event',
+        title: `${evt.name} Standings`,
+        eventName: evt.name,
+        eventId: evt.id
+      });
+    }
+  });
+
+  // If there is a 4th event, put it in Box 4
+  if (events.length >= 4) {
+    boxSlots.push({
+      type: 'event',
+      title: `${events[3].name} Standings`,
+      eventName: events[3].name,
+      eventId: events[3].id
+    });
+  } else {
+    // If only 3 events, 4th box is Visitors Leaderboard (combined Visitor & Faculty)
+    boxSlots.push({
+      type: 'scanner',
+      title: '🎟️/🎓 Visitors Leaderboard'
+    });
+  }
+
+  // Fallbacks if there are fewer than 3 events
+  if (boxSlots.length < 4) {
+    const hasScanner = boxSlots.some(s => s.type === 'scanner');
+    if (!hasScanner) {
+      boxSlots.push({
+        type: 'scanner',
+        title: '🎟️/🎓 Visitors Leaderboard'
+      });
+    }
+  }
+  while (boxSlots.length < 4) {
+    boxSlots.push({
+      type: 'empty',
+      title: 'TBD Standings'
+    });
+  }
+
+  // Detect if Scanner leaderboard is displayed in the 2x2 grid
+  const isScannerInGrid = boxSlots.some(s => s.type === 'scanner');
+
+  // Helper to render a leaderboard box slot
+  const renderLeaderboardBox = (slot, idx) => {
+    if (slot.type === 'event') {
+      const teamsInEvent = sortedTeams.filter(t => t.event === slot.eventName);
+      return (
+        <div key={idx} className="glass-panel leaderboard-box-panel">
+          <h3>
+            <span>🏆 {slot.title}</span>
+            <span style={{ fontSize: '11px', color: 'var(--accent-cyan)' }}>({teamsInEvent.length} Teams)</span>
+          </h3>
+          <div className="table-container-scrollable">
+            {teamsInEvent.length === 0 ? (
+              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>
+                No teams registered yet.
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '50px' }}>Rank</th>
+                    <th>Team</th>
+                    <th style={{ textAlign: 'right' }}>Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamsInEvent.map((team, rIdx) => {
+                    const rankClass = rIdx === 0 ? 'rank-text-gold' : rIdx === 1 ? 'rank-text-silver' : rIdx === 2 ? 'rank-text-bronze' : '';
+                    const rankIcon = rIdx === 0 ? '🥇' : rIdx === 1 ? '🥈' : rIdx === 2 ? '🥉' : `#${rIdx + 1}`;
+                    return (
+                      <tr key={team.id}>
+                        <td className={rankClass} style={{ fontSize: '20px' }}>{rankIcon}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <img
+                              src={team.leaderPhoto || team.leader_photo || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"}
+                              alt="Leader"
+                              style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                background: 'rgba(255, 255, 255, 0.05)'
+                              }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: '600' }}>{team.name}</div>
+                              <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>
+                                <span>{team.id}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--accent-cyan)' }}>{team.points} pts</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
+        </div>
+      );
+    }
 
-          <form onSubmit={handleAdminLogin} className="registration-form">
-            {adminError && <div className="error-message alert-pop">{adminError}</div>}
+    if (slot.type === 'scanner') {
+      return (
+        <div key={idx} className="glass-panel leaderboard-box-panel">
+          <h3>
+            <span>🎟️/🎓 Visitors Leaderboard</span>
+            <span style={{ fontSize: '11px', color: 'var(--accent-cyan)' }}>({combinedScanners.length} Entries)</span>
+          </h3>
+          <div className="table-container-scrollable">
+            {combinedScanners.length === 0 ? (
+              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>
+                No scanners registered yet.
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '50px' }}>Rank</th>
+                    <th>Visitor</th>
+                    <th style={{ textAlign: 'right' }}>Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {combinedScanners.map((sc, rIdx) => {
+                    const rankClass = rIdx === 0 ? 'rank-text-gold' : rIdx === 1 ? 'rank-text-silver' : rIdx === 2 ? 'rank-text-bronze' : '';
+                    const rankIcon = rIdx === 0 ? '🥇' : rIdx === 1 ? '🥈' : rIdx === 2 ? '🥉' : `#${rIdx + 1}`;
+                    const scanCount = scans.filter(s => s.scannerId === sc.id && s.status === 'approved').length;
+                    return (
+                      <tr key={sc.id}>
+                        <td className={rankClass} style={{ fontSize: '16px' }}>{rankIcon}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: '600' }}>{sc.name}</span>
+                            <span className="accent-badge" style={{
+                              fontSize: '9px',
+                              padding: '2px 6px',
+                              background: sc.role === 'Faculty' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                              color: sc.role === 'Faculty' ? 'var(--accent-warning)' : 'var(--accent-tech)',
+                              border: sc.role === 'Faculty' ? '1px solid rgba(245, 158, 11, 0.2)' : '1px solid rgba(6, 182, 212, 0.2)'
+                            }}>{sc.role}</span>
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{sc.mobile || sc.id} | {scanCount} scans</div>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--accent-cyan)' }}>{sc.points} pts</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      );
+    }
 
-            <div className="form-group">
-              <label htmlFor="adminId">Admin ID</label>
-              <input
-                id="adminId"
-                type="text"
-                value={adminUsername}
-                onChange={(e) => setAdminUsername(e.target.value)}
-                placeholder="Enter admin ID..."
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="adminPassword">Password</label>
-              <input
-                id="adminPassword"
-                type="password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Enter admin password..."
-                required
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-block">
-              Login to Admin System
-            </button>
-          </form>
+    return (
+      <div key={idx} className="glass-panel leaderboard-box-panel empty-state">
+        <h3>🏆 {slot.title}</h3>
+        <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
+          TBD Standings
         </div>
       </div>
     );
-  }
+  };
 
-  // 2. Admin Dashboard (Authenticated)
   return (
     <div className="admin-dashboard fade-in">
       <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2>Admin Management & Analytics</h2>
-          <p>Real-time overview of the AI Hackathon scoreboard, participant stats, and database controls.</p>
+          <p>Real-time overview of the AI Hackathon scoreboards, participant stats, and event setups.</p>
         </div>
-        <button onClick={handleAdminLogout} className="btn btn-outline" style={{ minWidth: '100px' }}>
-          Log Out
-        </button>
       </div>
 
       {/* Analytics Cards */}
@@ -191,218 +307,149 @@ export default function AdminPage({ teams, visitors, faculty, scans }) {
         </div>
       </div>
 
-      {/* Leaderboard Section */}
+      {/* 2x2 Leaderboards Grid */}
       <div className="leaderboard-section">
-        <h3>🏆 Hackathon Leaderboard</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ margin: 0 }}>🏆 Hackathon Standings (2x2 Scoreboards)</h3>
+          <button 
+            onClick={() => window.open('?view=leaderboard', '_blank')}
+            className="btn btn-outline"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', fontSize: '12px' }}
+            title="Open TV Presentation Leaderboard"
+          >
+            <span>📺</span>
+            <span>Presentation View</span>
+          </button>
+        </div>
+        <div className="leaderboards-2x2-grid">
+          {boxSlots.map((slot, idx) => renderLeaderboardBox(slot, idx))}
+        </div>
+      </div>
 
-        {sortedTeams.length === 0 ? (
-          <div className="glass-panel empty-state">
-            <p>No teams registered yet. Use the Database Tools at the bottom to seed mock data!</p>
+      {/* Backup Scanner Leaderboard if not visible in 2x2 grid (i.e. if 4+ events occupy the grid) */}
+      {!isScannerInGrid && (
+        <div style={{ marginTop: '24px', marginBottom: '24px' }}>
+          <div className="glass-panel leaderboard-table-panel">
+            <h3 style={{ fontFamily: 'var(--font-tech)', fontSize: '15px', marginBottom: '16px' }}>
+              🎟️/🎓 Visitors Leaderboard (Combined)
+            </h3>
+            <div className="table-responsive">
+              <table className="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Role</th>
+                    <th>Name</th>
+                    <th>Identifier</th>
+                    <th>Scans</th>
+                    <th>Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {combinedScanners.map((sc, index) => {
+                    const scanCount = scans.filter(s => s.scannerId === sc.id && s.status === 'approved').length;
+                    return (
+                      <tr key={sc.id} className="leaderboard-row">
+                        <td className="row-rank">#{index + 1}</td>
+                        <td>
+                          <span className="accent-badge" style={{
+                            background: sc.role === 'Faculty' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                            color: sc.role === 'Faculty' ? 'var(--accent-warning)' : 'var(--accent-tech)',
+                            border: sc.role === 'Faculty' ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(6, 182, 212, 0.3)'
+                          }}>{sc.role}</span>
+                        </td>
+                        <td className="row-team-name">{sc.name}</td>
+                        <td className="row-members">{sc.mobile || sc.id}</td>
+                        <td className="row-members">{scanCount} scans</td>
+                        <td className="row-points">{sc.points} pts</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Podium (Top 3) */}
-            <div className="podium-container">
-              {/* 2nd Place Card */}
-              <div className="podium-column second-place-col">
-                {secondPlace ? (
-                  <div className="podium-card glass-panel silver-glow fade-in-podium">
-                    <div className="rank-badge silver">#2</div>
-                    <span className="podium-medal">🥈</span>
-                    <span className="podium-rank-text">2ND PLACE</span>
-                    <h4 className="podium-team-name">{secondPlace.name}</h4>
-                    <span className="podium-team-id">{secondPlace.id}</span>
-                    <div className="podium-points-box">
-                      <span className="points-num">{secondPlace.points}</span>
-                      <span className="points-lbl">Pts</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="podium-card glass-panel empty-podium">
-                    <span className="podium-medal">🥈</span>
-                    <p>TBD</p>
-                  </div>
-                )}
-                <div className="podium-block silver-block">2</div>
-              </div>
+        </div>
+      )}
 
-              {/* 1st Place Card - Taller & Elevated */}
-              <div className="podium-column first-place-col">
-                {firstPlace ? (
-                  <div className="podium-card glass-panel gold-glow fade-in-podium">
-                    <div className="rank-badge gold">#1</div>
-                    <span className="podium-medal crown-animation">👑</span>
-                    <span className="podium-rank-text gold-text">1ST PLACE</span>
-                    <h4 className="podium-team-name">{firstPlace.name}</h4>
-                    <span className="podium-team-id">{firstPlace.id}</span>
-                    <div className="podium-points-box gold-bg">
-                      <span className="points-num">{firstPlace.points}</span>
-                      <span className="points-lbl">Pts</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="podium-card glass-panel empty-podium">
-                    <span className="podium-medal">🥇</span>
-                    <p>TBD</p>
-                  </div>
-                )}
-                <div className="podium-block gold-block">1</div>
-              </div>
+      {/* Event Management & Database Tools Section */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginTop: '24px' }}>
+        {/* Event Management Widget */}
+        <div className="glass-panel">
+          <h3>📅 Event Management</h3>
+          <p>Add new events or delete existing ones. Seed events are loaded by default.</p>
+          
+          <form onSubmit={handleAddEventSubmit} style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '12px' }}>
+            <input
+              type="text"
+              placeholder="Event Name (e.g. AI Hack)"
+              value={newEventName}
+              onChange={(e) => setNewEventName(e.target.value)}
+              style={{
+                flex: 1,
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                color: 'var(--text-primary)',
+                outline: 'none'
+              }}
+              required
+            />
+            <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px' }}>
+              Add
+            </button>
+          </form>
 
-              {/* 3rd Place Card */}
-              <div className="podium-column third-place-col">
-                {thirdPlace ? (
-                  <div className="podium-card glass-panel bronze-glow fade-in-podium">
-                    <div className="rank-badge bronze">#3</div>
-                    <span className="podium-medal">🥉</span>
-                    <span className="podium-rank-text">3RD PLACE</span>
-                    <h4 className="podium-team-name">{thirdPlace.name}</h4>
-                    <span className="podium-team-id">{thirdPlace.id}</span>
-                    <div className="podium-points-box">
-                      <span className="points-num">{thirdPlace.points}</span>
-                      <span className="points-lbl">Pts</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="podium-card glass-panel empty-podium">
-                    <span className="podium-medal">🥉</span>
-                    <p>TBD</p>
-                  </div>
-                )}
-                <div className="podium-block bronze-block">3</div>
-              </div>
-            </div>
-
-            {/* Rest of the Leaderboard Table */}
-            {remainingTeams.length > 0 && (
-              <div className="glass-panel leaderboard-table-panel">
-                <h4>Rankings Table</h4>
-                <div className="table-responsive">
-                  <table className="leaderboard-table">
-                    <thead>
-                      <tr>
-                        <th>S.No</th>
-                        <th>Team ID</th>
-                        <th>Team Name</th>
-                        <th>Members</th>
-                        <th>Points</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {remainingTeams.map((team, index) => (
-                        <tr key={team.id} className="leaderboard-row">
-                          <td className="row-rank">#{index + 4}</td>
-                          <td className="row-team-id">{team.id}</td>
-                          <td className="row-team-name">{team.name}</td>
-                          <td className="row-members">
-                            {team.members.join(', ')}
-                          </td>
-                          <td className="row-points">{team.points} pts</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+          <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {events.length === 0 ? (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>No events registered yet.</p>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {events.map(evt => (
+                  <li
+                    key={evt.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      borderRadius: '8px',
+                      marginBottom: '6px'
+                    }}
+                  >
+                    <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{evt.name}</span>
+                    <button
+                      onClick={() => handleDeleteEventClick(evt.id, evt.name)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent-danger)',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </>
-        )}
-      </div>
-
-      {/* Scanner Leaderboards Section (Student Visitor & Faculty) */}
-      <div className="scanner-leaderboards-section">
-        
-        {/* Student Visitor Rankings Panel */}
-        <div className="glass-panel leaderboard-table-panel">
-          <h3 style={{ fontFamily: 'var(--font-tech)', fontSize: '15px', marginBottom: '16px' }}>
-            🎟️ Student Visitor Leaderboard
-          </h3>
-          {sortedVisitors.length === 0 ? (
-            <div className="empty-state">No visitors registered yet.</div>
-          ) : (
-            <div className="table-responsive">
-              <table className="leaderboard-table">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Mobile</th>
-                    <th>Scans</th>
-                    <th>Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedVisitors.map((vis, index) => {
-                    const scanCount = scans.filter(s => s.scannerId === vis.id && s.status === 'approved').length;
-                    return (
-                      <tr key={vis.id} className="leaderboard-row">
-                        <td className="row-rank">#{index + 1}</td>
-                        <td className="row-team-id">{vis.id}</td>
-                        <td className="row-team-name">{vis.name}</td>
-                        <td className="row-members">{vis.mobile}</td>
-                        <td className="row-members">{scanCount} scans</td>
-                        <td className="row-points">{vis.points} pts</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* Faculty Rankings Panel */}
-        <div className="glass-panel leaderboard-table-panel">
-          <h3 style={{ fontFamily: 'var(--font-tech)', fontSize: '15px', marginBottom: '16px' }}>
-            🎓 Faculty Leaderboard
-          </h3>
-          {sortedFaculty.length === 0 ? (
-            <div className="empty-state">No faculty registered yet.</div>
-          ) : (
-            <div className="table-responsive">
-              <table className="leaderboard-table">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Scans</th>
-                    <th>Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedFaculty.map((fac, index) => {
-                    const scanCount = scans.filter(s => s.scannerId === fac.id && s.status === 'approved').length;
-                    return (
-                      <tr key={fac.id} className="leaderboard-row">
-                        <td className="row-rank">#{index + 1}</td>
-                        <td className="row-team-id" style={{ color: 'var(--accent-warning)' }}>{fac.id}</td>
-                        <td className="row-team-name">{fac.name}</td>
-                        <td className="row-members">{scanCount} scans</td>
-                        <td className="row-points" style={{ color: 'var(--accent-warning)' }}>{fac.points} pts</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* Admin Action Buttons */}
-      <div className="glass-panel admin-controls-panel" style={{ marginTop: '24px' }}>
-        <h3>🛠️ Database Tools</h3>
-        <p>Manage sandbox state. Seed mock data to immediately inspect the reactive UI flow or clear the database to start fresh.</p>
-        <div className="control-buttons">
-          <button onClick={handleSeed} className="btn btn-primary">
-            Seed Mock Data
-          </button>
-          <button onClick={handleReset} className="btn btn-danger">
-            Reset Database
-          </button>
+        {/* Database Tools Widget */}
+        <div className="glass-panel admin-controls-panel">
+          <h3>🛠️ Database Tools</h3>
+          <p>Manage sandbox state. Clear the database to start fresh.</p>
+          <div className="control-buttons" style={{ marginTop: '16px' }}>
+            <button onClick={handleReset} className="btn btn-danger">
+              Reset Database
+            </button>
+          </div>
         </div>
       </div>
     </div>

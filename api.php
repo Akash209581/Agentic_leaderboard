@@ -20,20 +20,56 @@ try {
     echo json_encode(["error" => "Database connection failed: " . $e->getMessage()]);
     exit();
 }
-
 // Initialize tables if they don't exist
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS teams (
       id TEXT PRIMARY KEY,
       name TEXT UNIQUE,
       leader_name TEXT,
-      leader_reg_no TEXT,
+      leader_reg_no TEXT UNIQUE,
       member_count INTEGER,
       members TEXT, -- JSON string array
       points INTEGER DEFAULT 0,
-      registered_at INTEGER
+      registered_at INTEGER,
+      event TEXT,
+      leader_photo TEXT
     )
 ");
+
+try {
+    $pdo->exec("ALTER TABLE teams ADD COLUMN event TEXT");
+} catch (Exception $e) {
+    // Ignore error if column already exists
+}
+
+try {
+    $pdo->exec("ALTER TABLE teams ADD COLUMN leader_photo TEXT");
+} catch (Exception $e) {
+    // Ignore error if column already exists
+}
+
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS events (
+      id TEXT PRIMARY KEY,
+      name TEXT UNIQUE,
+      created_at INTEGER
+    )
+");
+
+// Seed default events if events table is empty
+$count = $pdo->query("SELECT COUNT(*) as count FROM events")->fetch()['count'];
+if ($count == 0) {
+    $defaultEvents = [
+        ['E-1', 'Web Development', round(microtime(true) * 1000)],
+        ['E-2', 'AI/ML Hackathon', round(microtime(true) * 1000)],
+        ['E-3', 'Cybersecurity CTF', round(microtime(true) * 1000)],
+        ['E-4', 'App Development', round(microtime(true) * 1000)]
+    ];
+    $ins = $pdo->prepare("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)");
+    foreach ($defaultEvents as $evt) {
+        $ins->execute($evt);
+    }
+}
 
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS visitors (
@@ -107,6 +143,7 @@ switch ($route) {
                 $visitors = $pdo->query("SELECT * FROM visitors")->fetchAll();
                 $faculty = $pdo->query("SELECT * FROM faculty")->fetchAll();
                 $scans = $pdo->query("SELECT * FROM scans")->fetchAll();
+                $events = $pdo->query("SELECT * FROM events ORDER BY created_at ASC")->fetchAll();
                 
                 // Decode team members list
                 foreach ($teams as &$t) {
@@ -117,7 +154,8 @@ switch ($route) {
                     "teams" => $teams,
                     "visitors" => $visitors,
                     "faculty" => $faculty,
-                    "scans" => $scans
+                    "scans" => $scans,
+                    "events" => $events
                 ]);
             } catch (Exception $e) {
                 http_response_code(500);
@@ -134,10 +172,18 @@ switch ($route) {
             $leaderRegNo = $input['leaderRegNo'] ?? '';
             $memberCount = $input['memberCount'] ?? 1;
             $membersList = $input['members'] ?? [];
+            $event = $input['event'] ?? '';
+            $leaderPhoto = $input['leaderPhoto'] ?? '';
 
-            if (empty($name) || empty($leaderName) || empty($leaderRegNo)) {
+            if (empty($name) || empty($leaderName) || empty($leaderRegNo) || empty($event)) {
                 http_response_code(400);
-                echo json_encode(["error" => "Team name, leader name, and leader registration number are required."]);
+                echo json_encode(["error" => "Team name, leader name, registration number, and event are required."]);
+                exit();
+            }
+
+            if (empty($leaderPhoto)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Leader photo is required."]);
                 exit();
             }
 
@@ -150,12 +196,20 @@ switch ($route) {
                     exit();
                 }
 
+                $stmt = $pdo->prepare("SELECT id FROM teams WHERE leader_reg_no = ?");
+                $stmt->execute([$leaderRegNo]);
+                if ($stmt->fetch()) {
+                    http_response_code(400);
+                    echo json_encode(["error" => "A team leader with this registration number is already registered."]);
+                    exit();
+                }
+
                 $count = $pdo->query("SELECT COUNT(*) as count FROM teams")->fetch()['count'];
                 $teamId = "T-" . (1000 + $count + 1);
                 $timestamp = round(microtime(true) * 1000);
 
-                $stmt = $pdo->prepare("INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
-                $stmt->execute([$teamId, $name, $leaderName, $leaderRegNo, (int)$memberCount, json_encode($membersList), $timestamp]);
+                $stmt = $pdo->prepare("INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, leader_photo) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)");
+                $stmt->execute([$teamId, $name, $leaderName, $leaderRegNo, (int)$memberCount, json_encode($membersList), $timestamp, $event, $leaderPhoto]);
 
                 echo json_encode([
                     "id" => $teamId,
@@ -165,7 +219,9 @@ switch ($route) {
                     "memberCount" => (int)$memberCount,
                     "members" => $membersList,
                     "points" => 0,
-                    "registeredAt" => $timestamp
+                    "registeredAt" => $timestamp,
+                    "event" => $event,
+                    "leaderPhoto" => $leaderPhoto
                 ]);
             } catch (Exception $e) {
                 http_response_code(500);
@@ -219,6 +275,13 @@ switch ($route) {
                 exit();
             }
 
+            // Enforce exactly 10-digit mobile number
+            if (!preg_match('/^\d{10}$/', $mobile)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Mobile number must be exactly 10 digits."]);
+                exit();
+            }
+
             try {
                 $stmt = $pdo->prepare("SELECT id FROM visitors WHERE mobile = ?");
                 $stmt->execute([$mobile]);
@@ -242,6 +305,54 @@ switch ($route) {
                     "points" => 0,
                     "registeredAt" => $timestamp
                 ]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(["error" => $e->getMessage()]);
+            }
+        }
+        break;
+
+    case 'add-event':
+        if ($method === 'POST') {
+            $input = getJsonInput();
+            $name = $input['name'] ?? '';
+            if (empty($name)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Event name is required."]);
+                exit();
+            }
+            try {
+                $stmt = $pdo->prepare("SELECT id FROM events WHERE LOWER(name) = ?");
+                $stmt->execute([strtolower($name)]);
+                if ($stmt->fetch()) {
+                    http_response_code(400);
+                    echo json_encode(["error" => "An event with this name already exists."]);
+                    exit();
+                }
+                $id = "E-" . round(microtime(true) * 1000);
+                $stmt = $pdo->prepare("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)");
+                $stmt->execute([$id, $name, round(microtime(true) * 1000)]);
+                echo json_encode(["success" => true, "event" => ["id" => $id, "name" => $name]]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(["error" => $e->getMessage()]);
+            }
+        }
+        break;
+
+    case 'delete-event':
+        if ($method === 'POST') {
+            $input = getJsonInput();
+            $id = $input['id'] ?? '';
+            if (empty($id)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Event ID is required."]);
+                exit();
+            }
+            try {
+                $stmt = $pdo->prepare("DELETE FROM events WHERE id = ?");
+                $stmt->execute([$id]);
+                echo json_encode(["success" => true]);
             } catch (Exception $e) {
                 http_response_code(500);
                 echo json_encode(["error" => $e->getMessage()]);
@@ -496,7 +607,6 @@ switch ($route) {
             }
         }
         break;
-
     case 'seed':
         if ($method === 'POST') {
             try {
@@ -508,13 +618,14 @@ switch ($route) {
                 $timestamp = round(microtime(true) * 1000);
 
                 // Seed Teams
+                $defaultPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4' width='100' height='100'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
                 $teams = [
-                    ['T-1001', 'Alpha Coders', 'John Doe', 'REG001', 3, json_encode(['John Doe', 'Alice Smith', 'Bob Johnson']), 40, $timestamp - 3600000 * 5],
-                    ['T-1002', 'Beta Blockers', 'Mary Sue', 'REG002', 2, json_encode(['Mary Sue', 'Dave Miller']), 20, $timestamp - 3600000 * 4],
-                    ['T-1003', 'Gamma Geniuses', 'Sarah Connor', 'REG003', 4, json_encode(['Sarah Connor', 'Kyle Reese', 'John Connor', 'T-800']), 50, $timestamp - 3600000 * 3],
-                    ['T-1004', 'Delta Devs', 'Bruce Wayne', 'REG004', 3, json_encode(['Bruce Wayne', 'Clark Kent', 'Diana Prince']), 10, $timestamp - 3600000 * 2]
+                    ['T-1001', 'Alpha Coders', 'John Doe', 'REG001', 3, json_encode(['John Doe', 'Alice Smith', 'Bob Johnson']), 40, $timestamp - 3600000 * 5, 'Web Development', $defaultPhoto],
+                    ['T-1002', 'Beta Blockers', 'Mary Sue', 'REG002', 2, json_encode(['Mary Sue', 'Dave Miller']), 20, $timestamp - 3600000 * 4, 'AI/ML Hackathon', $defaultPhoto],
+                    ['T-1003', 'Gamma Geniuses', 'Sarah Connor', 'REG003', 4, json_encode(['Sarah Connor', 'Kyle Reese', 'John Connor', 'T-800']), 50, $timestamp - 3600000 * 3, 'Cybersecurity CTF', $defaultPhoto],
+                    ['T-1004', 'Delta Devs', 'Bruce Wayne', 'REG004', 3, json_encode(['Bruce Wayne', 'Clark Kent', 'Diana Prince']), 10, $timestamp - 3600000 * 2, 'App Development', $defaultPhoto]
                 ];
-                $stmt = $pdo->prepare("INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, leader_photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 foreach ($teams as $team) {
                     $stmt->execute($team);
                 }
@@ -552,6 +663,21 @@ switch ($route) {
                     $stmt->execute($scan);
                 }
 
+                // Seed Events if empty
+                $count = $pdo->query("SELECT COUNT(*) as count FROM events")->fetch()['count'];
+                if ($count == 0) {
+                    $defaultEvents = [
+                        ['E-1', 'Web Development', round(microtime(true) * 1000)],
+                        ['E-2', 'AI/ML Hackathon', round(microtime(true) * 1000)],
+                        ['E-3', 'Cybersecurity CTF', round(microtime(true) * 1000)],
+                        ['E-4', 'App Development', round(microtime(true) * 1000)]
+                    ];
+                    $ins = $pdo->prepare("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)");
+                    foreach ($defaultEvents as $evt) {
+                        $ins->execute($evt);
+                    }
+                }
+
                 echo json_encode(["success" => true, "message" => "Database seeded."]);
             } catch (Exception $e) {
                 http_response_code(500);
@@ -567,6 +693,19 @@ switch ($route) {
                 $pdo->exec("DELETE FROM visitors");
                 $pdo->exec("DELETE FROM faculty");
                 $pdo->exec("DELETE FROM scans");
+                $pdo->exec("DELETE FROM events");
+
+                $defaultEvents = [
+                    ['E-1', 'Web Development', round(microtime(true) * 1000)],
+                    ['E-2', 'AI/ML Hackathon', round(microtime(true) * 1000)],
+                    ['E-3', 'Cybersecurity CTF', round(microtime(true) * 1000)],
+                    ['E-4', 'App Development', round(microtime(true) * 1000)]
+                ];
+                $ins = $pdo->prepare("INSERT INTO events (id, name, created_at) VALUES (?, ?, ?)");
+                foreach ($defaultEvents as $evt) {
+                    $ins->execute($evt);
+                }
+
                 echo json_encode(["success" => true, "message" => "Database reset."]);
             } catch (Exception $e) {
                 http_response_code(500);
@@ -574,7 +713,6 @@ switch ($route) {
             }
         }
         break;
-
     default:
         http_response_code(404);
         echo json_encode(["error" => "Endpoint not found."]);

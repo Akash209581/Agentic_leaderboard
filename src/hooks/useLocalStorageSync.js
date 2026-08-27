@@ -5,6 +5,7 @@ export const useLocalStorageSync = () => {
   const [visitors, setVisitors] = useState([]);
   const [faculty, setFaculty] = useState([]);
   const [scans, setScans] = useState([]);
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -16,6 +17,7 @@ export const useLocalStorageSync = () => {
           setVisitors(data.visitors || []);
           setFaculty(data.faculty || []);
           setScans(data.scans || []);
+          setEvents(data.events || []);
         }
       } catch (err) {
         console.error('Failed to sync data from server database', err);
@@ -36,5 +38,5 @@ export const useLocalStorageSync = () => {
     };
   }, []);
 
-  return { teams, visitors, faculty, scans };
+  return { teams, visitors, faculty, scans, events };
 };
