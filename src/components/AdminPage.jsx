@@ -362,15 +362,6 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
       <div className="leaderboard-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ margin: 0 }}>🏆 Live Standings (Scoreboards)</h3>
-          <button 
-            onClick={() => window.open('?view=leaderboard', '_blank')}
-            className="btn btn-outline"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', fontSize: '12px' }}
-            title="Open TV Presentation Leaderboard"
-          >
-            <span>📺</span>
-            <span>Presentation View</span>
-          </button>
         </div>
         <div className="leaderboards-2x2-grid">
           {boxSlots.map((slot, idx) => renderLeaderboardBox(slot, idx))}
@@ -380,44 +371,69 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
       {/* Backup Scanner Leaderboard if not visible in 2x2 grid */}
       {!isScannerInGrid && (
         <div style={{ marginTop: '24px', marginBottom: '24px' }}>
-          <div className="glass-panel leaderboard-table-panel">
-            <h3 style={{ fontFamily: 'var(--font-tech)', fontSize: '15px', marginBottom: '16px' }}>
-              🎟️/🎓 Visitors Leaderboard (Combined)
-            </h3>
-            <div className="table-responsive">
-              <table className="leaderboard-table">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Role</th>
-                    <th>Name</th>
-                    <th>Identifier</th>
-                    <th>Scans</th>
-                    <th>Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {combinedScanners.map((sc, index) => {
-                    const scanCount = scans.filter(s => s.scannerId === sc.id && s.status === 'approved').length;
-                    return (
-                      <tr key={sc.id} className="leaderboard-row">
-                        <td className="row-rank">#{index + 1}</td>
-                        <td>
-                          <span className="accent-badge" style={{
-                            background: sc.role === 'Faculty' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(6, 182, 212, 0.15)',
-                            color: sc.role === 'Faculty' ? 'var(--accent-warning)' : 'var(--accent-tech)',
-                            border: sc.role === 'Faculty' ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(6, 182, 212, 0.3)'
-                          }}>{sc.role}</span>
-                        </td>
-                        <td className="row-team-name">{sc.name}</td>
-                        <td className="row-members">{sc.mobile || sc.id}</td>
-                        <td className="row-members">{scanCount} scans</td>
-                        <td className="row-points">{sc.points} pts</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <div className="glass-panel leaderboard-box-panel">
+            <div className="leaderboard-box-header">
+              <div className="box-header-title">
+                <span className="trophy-icon">🎟️</span>
+                <h4>Visitors & Faculty Standings</h4>
+              </div>
+              <span className="team-count-pill">{combinedScanners.length} Scanners</span>
+            </div>
+
+            <div className="table-container-scrollable">
+              {combinedScanners.length === 0 ? (
+                <div className="empty-leaderboard-state">
+                  <div className="empty-state-icon">🎟️</div>
+                  <h5>No Scanners Yet</h5>
+                  <p>Visitor and faculty point activity will appear here in real-time.</p>
+                </div>
+              ) : (
+                <table className="modern-leaderboard-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '60px' }}>Rank</th>
+                      <th>Participant</th>
+                      <th style={{ textAlign: 'right' }}>Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {combinedScanners.map((sc, rIdx) => {
+                      const isPodium = rIdx < 3;
+                      const rankClass = rIdx === 0 ? 'rank-gold' : rIdx === 1 ? 'rank-silver' : rIdx === 2 ? 'rank-bronze' : 'rank-normal';
+                      const rankBadge = rIdx === 0 ? '🥇 1st' : rIdx === 1 ? '🥈 2nd' : rIdx === 2 ? '🥉 3rd' : `#${rIdx + 1}`;
+                      const scanCount = scans.filter(s => s.scannerId === sc.id && s.status === 'approved').length;
+                      
+                      return (
+                        <tr key={sc.id} className={`leaderboard-item-row ${isPodium ? 'podium-row' : ''}`}>
+                          <td>
+                            <span className={`modern-rank-badge ${rankClass}`}>
+                              {rankBadge}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="team-cell-content">
+                              <div className="team-meta">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span className="team-title-text">{sc.name}</span>
+                                  <span className={`role-pill-badge ${sc.role.toLowerCase()}`}>
+                                    {sc.role}
+                                  </span>
+                                </div>
+                                <span className="team-sub-id">{sc.mobile || sc.id} • {scanCount} approved scans</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span className="points-pill-highlight">
+                              {sc.points} <small>PTS</small>
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
