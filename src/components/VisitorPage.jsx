@@ -625,7 +625,8 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
               <div className="live-dot-container">
                 <span className="live-dot yellow"></span>
               </div>
-              <h3>Scan Initiated!</h3>
+              <span className="accent-badge">SCAN INITIATED</span>
+              <h3>Verification Code</h3>
             </div>
             <div className="modal-body">
               <p>
@@ -633,8 +634,13 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
               </p>
               
               <div className="otp-display-box">
-                <span className="otp-label">GIVE THIS CODE TO THE STUDENTS</span>
-                <span className="otp-value">{scanPendingRecord.code}</span>
+                <span className="otp-label">🔑 GIVE THIS CODE TO THE STUDENTS</span>
+                <div className="otp-digits-row">
+                  {String(scanPendingRecord.code).split('').map((digit, idx) => (
+                    <span key={idx} className="otp-digit-card">{digit}</span>
+                  ))}
+                </div>
+                <p className="otp-helper-text">Students must enter this 4-digit code on their device to approve points.</p>
               </div>
 
               <div className="waiting-spinner-container">
@@ -644,6 +650,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
               <div className="modal-actions">
                 <button 
+                  type="button"
                   onClick={() => {
                     setScanPendingRecord(null);
                     setIsScanning(false);
@@ -670,31 +677,32 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
       {/* Pre-camera Confirmation Modal */}
       {showCameraPrompt && (
-        <div className="modal-backdrop" style={{ zIndex: 1200 }}>
-          <div className="modal-content glass-panel alert-pop" style={{ maxWidth: '380px', border: '1px solid rgba(6, 182, 212, 0.3)', boxShadow: '0 0 30px rgba(6, 182, 212, 0.15)' }}>
+        <div className="modal-backdrop">
+          <div className="modal-content glass-panel alert-pop" style={{ maxWidth: '420px' }}>
             <div className="modal-header">
+              <div className="modal-icon-badge">📷</div>
               <span className="accent-badge">HARDWARE ACCESS</span>
-              <h3 style={{ marginTop: '8px', fontFamily: 'var(--font-tech)', fontSize: '18px' }}>Allow Camera Access?</h3>
+              <h3>Allow Camera Access?</h3>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: '1.6' }}>
                 Agentic AI Day requires access to your device camera to scan student registration QR codes and process scan validation.
               </p>
               <div className="modal-actions">
                 <button 
+                  type="button"
                   onClick={() => setShowCameraPrompt(false)} 
                   className="btn btn-secondary"
-                  style={{ flex: 1 }}
                 >
                   Cancel
                 </button>
                 <button 
+                  type="button"
                   onClick={() => {
                     setShowCameraPrompt(false);
                     setCameraActive(true);
                   }} 
                   className="btn btn-primary"
-                  style={{ flex: 1 }}
                 >
                   Allow Camera
                 </button>

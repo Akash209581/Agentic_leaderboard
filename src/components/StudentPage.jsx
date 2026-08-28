@@ -618,7 +618,8 @@ export default function StudentPage({ teams, scans, events = [] }) {
               <div className="live-dot-container">
                 <span className="live-dot"></span>
               </div>
-              <h3>Live Scan Request!</h3>
+              <span className="accent-badge">LIVE SCAN REQUEST</span>
+              <h3>Incoming Approval!</h3>
             </div>
             <div className="modal-body">
               <p>
@@ -639,7 +640,7 @@ export default function StudentPage({ teams, scans, events = [] }) {
                     inputMode="numeric"
                     value={verifyCode}
                     onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Enter 4-Digit Code"
+                    placeholder="••••"
                     className="code-input"
                     autoFocus
                     required
