@@ -34,6 +34,13 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
   const [verifyCode, setVerifyCode] = useState('');
   const [approvalError, setApprovalError] = useState('');
   const [approvalSuccess, setApprovalSuccess] = useState(false);
+  const [dismissedScanIds, setDismissedScanIds] = useState([]);
+  const [optimisticBonus, setOptimisticBonus] = useState(0);
+
+  // Reset optimistic bonus when server points update
+  useEffect(() => {
+    setOptimisticBonus(0);
+  }, [currentTeam?.points]);
 
   // Forgot Password State
   const [fpTeamName, setFpTeamName] = useState('');
@@ -220,44 +227,85 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
     }
   };
 
-  // Find if there is a pending scan for this team
-  const pendingScan = currentTeam
-    ? scans.find(s => s.teamId === currentTeam.id && s.status === 'pending')
-    : null;
+  // Find latest pending scan for this team accurately (ignoring stale scans older than 3 mins and dismissed scans)
+  const pendingScans = currentTeam
+    ? scans
+        .filter(s => 
+          s.teamId === currentTeam.id && 
+          s.status === 'pending' && 
+          (!s.timestamp || Date.now() - s.timestamp < 180000) &&
+          !dismissedScanIds.includes(s.id)
+        )
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+    : [];
+  const pendingScan = pendingScans[0] || null;
 
-  const handleApprove = async (e) => {
-    e.preventDefault();
-    setApprovalError('');
-    setApprovalSuccess(false);
+  const executeApprove = async (codeToVerify, targetScan) => {
+    const scanToApprove = targetScan || pendingScan;
+    if (!scanToApprove) return;
+
+    const trimmedCode = (codeToVerify || '').trim();
+    if (!trimmedCode) {
+      setApprovalError('Please enter the 4-digit code.');
+      return;
+    }
 
     if (!pointsActive) {
       setApprovalError('Point allocation is currently STOPPED by Administrator.');
       return;
     }
 
-    if (!verifyCode.trim()) {
-      setApprovalError('Please enter the 4-digit code.');
-      return;
-    }
+    const targetScanId = scanToApprove.id;
+
+    // 1. Immediately dismiss modal so entry card vanishes instantly
+    setDismissedScanIds(prev => [...prev, targetScanId]);
+    // 2. Immediately award optimistic points (+10)
+    setOptimisticBonus(prev => prev + 10);
+    // 3. Immediately show points celebration
+    setApprovalSuccess(true);
+    setVerifyCode('');
+    setApprovalError('');
 
     try {
-      const result = await approveScan(currentTeam.id, verifyCode.trim());
+      const result = await approveScan(currentTeam.id, trimmedCode);
       if (result.success) {
-        setApprovalSuccess(true);
-        setVerifyCode('');
         setTimeout(() => {
           setApprovalSuccess(false);
-        }, 3000);
+        }, 2500);
       }
     } catch (err) {
-      setApprovalError(err.message);
+      // Revert optimistic actions on error
+      setDismissedScanIds(prev => prev.filter(id => id !== targetScanId));
+      setOptimisticBonus(prev => Math.max(0, prev - 10));
+      setApprovalSuccess(false);
+      setApprovalError(err.message || 'Invalid verification code.');
+    }
+  };
+
+  const handleVerifyCodeChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setVerifyCode(val);
+    setApprovalError('');
+    if (val.length === 4) {
+      executeApprove(val, pendingScan);
+    }
+  };
+
+  const handleApprove = (e) => {
+    e.preventDefault();
+    if (verifyCode.trim().length === 4) {
+      executeApprove(verifyCode, pendingScan);
+    } else {
+      setApprovalError('Please enter all 4 digits of the code.');
     }
   };
 
   const handleReject = async () => {
     if (pendingScan) {
+      const scanId = pendingScan.id;
+      setDismissedScanIds(prev => [...prev, scanId]);
       try {
-        await rejectScan(pendingScan.id);
+        await rejectScan(scanId);
         setVerifyCode('');
         setApprovalError('');
       } catch (err) {
@@ -668,7 +716,7 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
                     pattern="[0-9]*"
                     inputMode="numeric"
                     value={verifyCode}
-                    onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+                    onChange={handleVerifyCodeChange}
                     placeholder="••••"
                     className="code-input"
                     autoFocus
@@ -728,7 +776,7 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
             <div className="points-banner-content">
               <span className="points-banner-title">⚡ TOTAL POINTS EARNED</span>
               <div className="points-banner-num-row">
-                <span className="points-big-num">{currentTeam.points || 0}</span>
+                <span className="points-big-num">{(currentTeam.points || 0) + optimisticBonus}</span>
                 <span className="points-unit-tag">PTS</span>
               </div>
               <span className="points-live-status">● Live Real-Time Standings</span>

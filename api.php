@@ -167,7 +167,7 @@ switch ($route) {
                 $teams = $pdo->query("SELECT * FROM teams")->fetchAll();
                 $visitors = $pdo->query("SELECT * FROM visitors")->fetchAll();
                 $faculty = $pdo->query("SELECT * FROM faculty")->fetchAll();
-                $scans = $pdo->query("SELECT * FROM scans")->fetchAll();
+                $scans = $pdo->query("SELECT * FROM scans ORDER BY timestamp DESC")->fetchAll();
                 $events = $pdo->query("SELECT * FROM events ORDER BY created_at ASC")->fetchAll();
                 $pointsActive = isPointsSystemActive($pdo);
                 
@@ -625,6 +625,11 @@ switch ($route) {
                     exit();
                 }
 
+                // Clean up any stale pending scans for this team older than 2 minutes
+                $cutoff = round(microtime(true) * 1000) - 120000;
+                $stmt = $pdo->prepare("UPDATE scans SET status = 'cancelled' WHERE team_id = ? AND status = 'pending' AND timestamp < ?");
+                $stmt->execute([$teamId, $cutoff]);
+
                 $stmt = $pdo->prepare("SELECT id FROM scans WHERE team_id = ? AND scanner_id = ? AND status = 'pending'");
                 $stmt->execute([$teamId, $scannerId]);
                 $existingPending = $stmt->fetch();
@@ -677,7 +682,7 @@ switch ($route) {
             }
 
             try {
-                $stmt = $pdo->prepare("SELECT * FROM scans WHERE team_id = ? AND code = ? AND status = 'pending'");
+                $stmt = $pdo->prepare("SELECT * FROM scans WHERE team_id = ? AND code = ? AND status = 'pending' ORDER BY timestamp DESC LIMIT 1");
                 $stmt->execute([$teamId, $code]);
                 $scan = $stmt->fetch();
 
@@ -692,6 +697,10 @@ switch ($route) {
                 // Approve scan
                 $stmt = $pdo->prepare("UPDATE scans SET status = 'approved', approved_at = ? WHERE id = ?");
                 $stmt->execute([$approvedAt, $scan['id']]);
+
+                // Cancel any other pending scans for this team
+                $stmt = $pdo->prepare("UPDATE scans SET status = 'cancelled' WHERE team_id = ? AND status = 'pending'");
+                $stmt->execute([$teamId]);
 
                 // Add points to team (+10)
                 $stmt = $pdo->prepare("UPDATE teams SET points = points + 10 WHERE id = ?");

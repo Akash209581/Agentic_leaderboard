@@ -33,8 +33,8 @@ export const useLocalStorageSync = () => {
 
     fetchData(); // Initial run
     
-    // Poll every 2 seconds for real-time scanner code approvals and scoreboard changes
-    const interval = setInterval(fetchData, 2000);
+    // Poll every 750ms for near real-time scanner code approvals and scoreboard changes
+    const interval = setInterval(fetchData, 750);
 
     // Custom event listener for immediate updates on local modifications
     window.addEventListener('local-db-update', fetchData);

@@ -324,7 +324,7 @@ app.get('/api/data', async (req, res) => {
     const teams = await dbAll('SELECT * FROM teams');
     const visitors = await dbAll('SELECT * FROM visitors');
     const faculty = await dbAll('SELECT * FROM faculty');
-    const scans = await dbAll('SELECT * FROM scans');
+    const scans = await dbAll('SELECT * FROM scans ORDER BY timestamp DESC');
     const events = await dbAll('SELECT * FROM events ORDER BY created_at ASC');
     const pointsActive = await isPointsSystemActive();
 
@@ -745,6 +745,12 @@ app.post('/api/initiate-scan', async (req, res) => {
       return res.status(400).json({ error: "You have already scanned this team's QR code!" });
     }
 
+    // Clean up any stale pending scans for this team older than 2 minutes
+    await dbRun(
+      "UPDATE scans SET status = 'cancelled' WHERE team_id = ? AND status = 'pending' AND timestamp < ?",
+      [teamId, Date.now() - 120000]
+    );
+
     // Check if pending scan exists from this scanner for this team
     const existingPending = await dbGet(
       "SELECT id FROM scans WHERE team_id = ? AND scanner_id = ? AND status = 'pending'",
@@ -802,7 +808,7 @@ app.post('/api/approve-scan', async (req, res) => {
 
   try {
     const scan = await dbGet(
-      "SELECT * FROM scans WHERE team_id = ? AND code = ? AND status = 'pending'",
+      "SELECT * FROM scans WHERE team_id = ? AND code = ? AND status = 'pending' ORDER BY timestamp DESC LIMIT 1",
       [teamId, code]
     );
 
@@ -818,13 +824,19 @@ app.post('/api/approve-scan', async (req, res) => {
       [approvedAt, scan.id]
     );
 
-    // 2. Award +10 points to student team
+    // 2. Cancel any other pending scans for this team so no dangling state remains
+    await dbRun(
+      "UPDATE scans SET status = 'cancelled' WHERE team_id = ? AND status = 'pending'",
+      [teamId]
+    );
+
+    // 3. Award +10 points to student team
     await dbRun(
       "UPDATE teams SET points = points + 10 WHERE id = ?",
       [teamId]
     );
 
-    // 3. Award +5 points to scanner
+    // 4. Award +5 points to scanner
     if (scan.scanner_type === 'visitor') {
       await dbRun(
         "UPDATE visitors SET points = points + 5 WHERE id = ?",
