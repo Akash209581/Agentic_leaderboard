@@ -318,10 +318,23 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', port, timestamp: new Date().toISOString() });
 });
 
+// Serve leader photo for a specific team (separate from bulk /api/data to avoid MB-per-poll)
+app.get('/api/team-photo/:id', async (req, res) => {
+  try {
+    const team = await dbGet('SELECT leader_photo FROM teams WHERE id = ?', [req.params.id]);
+    if (!team) return res.status(404).json({ error: 'Team not found.' });
+    res.json({ leaderPhoto: team.leader_photo || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Fetch all database state for syncing
 app.get('/api/data', async (req, res) => {
   try {
-    const teams = await dbAll('SELECT * FROM teams');
+    // Exclude leader_photo from bulk response - each base64 photo can be 2MB+
+    // Photos are fetched individually via /api/team-photo/:id
+    const teams = await dbAll('SELECT id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, unique_code FROM teams');
     const visitors = await dbAll('SELECT * FROM visitors');
     const faculty = await dbAll('SELECT * FROM faculty');
     const scans = await dbAll('SELECT * FROM scans ORDER BY timestamp DESC');
@@ -339,7 +352,7 @@ app.get('/api/data', async (req, res) => {
       points: parseInt(t.points || 0, 10),
       registeredAt: parseInt(t.registered_at || 0, 10),
       event: t.event,
-      leaderPhoto: t.leader_photo,
+      leaderPhoto: null, // Loaded separately via /api/team-photo/:id
       uniqueCode: t.unique_code
     }));
 

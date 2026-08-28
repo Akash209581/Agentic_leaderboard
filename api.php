@@ -164,7 +164,8 @@ switch ($route) {
     case 'data':
         if ($method === 'GET') {
             try {
-                $teams = $pdo->query("SELECT * FROM teams")->fetchAll();
+                // Exclude leader_photo from bulk response - each base64 photo is 2MB+
+                $teams = $pdo->query("SELECT id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, unique_code FROM teams")->fetchAll();
                 $visitors = $pdo->query("SELECT * FROM visitors")->fetchAll();
                 $faculty = $pdo->query("SELECT * FROM faculty")->fetchAll();
                 $scans = $pdo->query("SELECT * FROM scans ORDER BY timestamp DESC")->fetchAll();
@@ -174,6 +175,7 @@ switch ($route) {
                 // Decode team members list
                 foreach ($teams as &$t) {
                     $t['members'] = json_decode($t['members'] ?? '[]', true);
+                    $t['leader_photo'] = null; // Loaded separately via team-photo route
                 }
                 
                 echo json_encode([
@@ -273,6 +275,31 @@ switch ($route) {
                 $stmt2 = $pdo->prepare("DELETE FROM scans WHERE scanner_id = ?");
                 $stmt2->execute([$id]);
                 echo json_encode(["success" => true, "message" => "Faculty deleted successfully."]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(["error" => $e->getMessage()]);
+            }
+        }
+        break;
+
+    case 'team-photo':
+        if ($method === 'GET') {
+            $id = $_GET['id'] ?? '';
+            if (empty($id)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Team ID is required."]);
+                exit();
+            }
+            try {
+                $stmt = $pdo->prepare("SELECT leader_photo FROM teams WHERE id = ?");
+                $stmt->execute([$id]);
+                $row = $stmt->fetch();
+                if (!$row) {
+                    http_response_code(404);
+                    echo json_encode(["error" => "Team not found."]);
+                    exit();
+                }
+                echo json_encode(["leaderPhoto" => $row['leader_photo']]);
             } catch (Exception $e) {
                 http_response_code(500);
                 echo json_encode(["error" => $e->getMessage()]);
