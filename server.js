@@ -262,12 +262,39 @@ const initDb = async () => {
     )
   `);
 
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )
+  `);
+
+  // Ensure default points_active setting exists
+  try {
+    const pointsSetting = await dbGet("SELECT value FROM settings WHERE key = 'points_active'");
+    if (!pointsSetting) {
+      await dbRun("INSERT INTO settings (key, value) VALUES ('points_active', 'true')");
+    }
+  } catch (err) {
+    console.error('Error initializing settings:', err.message);
+  }
+
   console.log('Database tables initialized.');
 };
 
 initDb().catch(err => {
   console.error('Failed to initialize database tables:', err);
 });
+
+// Helper to check if points system is active
+const isPointsSystemActive = async () => {
+  try {
+    const setting = await dbGet("SELECT value FROM settings WHERE key = 'points_active'");
+    return !setting || setting.value === 'true' || setting.value === '1';
+  } catch (err) {
+    return true;
+  }
+};
 
 // Helper to generate a unique random 4-digit code
 const generateUniqueOTP = async () => {
@@ -299,6 +326,7 @@ app.get('/api/data', async (req, res) => {
     const faculty = await dbAll('SELECT * FROM faculty');
     const scans = await dbAll('SELECT * FROM scans');
     const events = await dbAll('SELECT * FROM events ORDER BY created_at ASC');
+    const pointsActive = await isPointsSystemActive();
 
     // Map database snake_case columns to React camelCase keys
     const parsedTeams = teams.map(t => ({
@@ -347,8 +375,73 @@ app.get('/api/data', async (req, res) => {
       visitors: parsedVisitors,
       faculty: parsedFaculty,
       scans: parsedScans,
-      events
+      events,
+      pointsActive
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Toggle Points Active / Stopped
+app.post('/api/toggle-points', async (req, res) => {
+  const { pointsActive } = req.body;
+  const activeValue = (pointsActive === true || pointsActive === 'true' || pointsActive === '1') ? 'true' : 'false';
+
+  try {
+    const existing = await dbGet("SELECT key FROM settings WHERE key = 'points_active'");
+    if (existing) {
+      await dbRun("UPDATE settings SET value = ? WHERE key = 'points_active'", [activeValue]);
+    } else {
+      await dbRun("INSERT INTO settings (key, value) VALUES ('points_active', ?)", [activeValue]);
+    }
+
+    res.json({ success: true, pointsActive: activeValue === 'true' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Delete Team
+app.post('/api/delete-team', async (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'Team ID is required.' });
+  }
+  try {
+    await dbRun('DELETE FROM teams WHERE id = ?', [id]);
+    await dbRun('DELETE FROM scans WHERE team_id = ?', [id]);
+    res.json({ success: true, message: `Team ${id} deleted successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Delete Visitor
+app.post('/api/delete-visitor', async (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'Visitor ID is required.' });
+  }
+  try {
+    await dbRun('DELETE FROM visitors WHERE id = ?', [id]);
+    await dbRun('DELETE FROM scans WHERE scanner_id = ?', [id]);
+    res.json({ success: true, message: `Visitor ${id} deleted successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Delete Faculty
+app.post('/api/delete-faculty', async (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'Faculty ID is required.' });
+  }
+  try {
+    await dbRun('DELETE FROM faculty WHERE id = ?', [id]);
+    await dbRun('DELETE FROM scans WHERE scanner_id = ?', [id]);
+    res.json({ success: true, message: `Faculty ${id} deleted successfully.` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -630,6 +723,12 @@ app.post('/api/initiate-scan', async (req, res) => {
     return res.status(400).json({ error: 'Missing scanning details.' });
   }
 
+  // Check if points system is active
+  const active = await isPointsSystemActive();
+  if (!active) {
+    return res.status(403).json({ error: 'Point allocation is currently STOPPED by Administrator. QR scanning is temporarily paused.' });
+  }
+
   try {
     // Verify team exists
     const team = await dbGet('SELECT id FROM teams WHERE id = ?', [teamId]);
@@ -693,6 +792,12 @@ app.post('/api/approve-scan', async (req, res) => {
 
   if (!teamId || !code) {
     return res.status(400).json({ error: 'Team ID and verification code are required.' });
+  }
+
+  // Check if points system is active
+  const active = await isPointsSystemActive();
+  if (!active) {
+    return res.status(403).json({ error: 'Point allocation is currently STOPPED by Administrator.' });
   }
 
   try {

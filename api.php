@@ -103,6 +103,34 @@ $pdo->exec("
     )
 ");
 
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )
+");
+
+// Initialize default settings if not exists
+try {
+    $stmt = $pdo->query("SELECT value FROM settings WHERE key = 'points_active'");
+    if (!$stmt->fetch()) {
+        $pdo->exec("INSERT INTO settings (key, value) VALUES ('points_active', '1')");
+    }
+} catch (Exception $e) {
+    // Ignore error
+}
+
+// Helper to check if points system is active
+function isPointsSystemActive($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT value FROM settings WHERE key = 'points_active'");
+        $row = $stmt->fetch();
+        return !$row || $row['value'] === '1' || $row['value'] === 'true';
+    } catch (Exception $e) {
+        return true;
+    }
+}
+
 // Route helper
 $route = isset($_GET['route']) ? $_GET['route'] : '';
 $method = $_SERVER['REQUEST_METHOD'];
@@ -141,6 +169,7 @@ switch ($route) {
                 $faculty = $pdo->query("SELECT * FROM faculty")->fetchAll();
                 $scans = $pdo->query("SELECT * FROM scans")->fetchAll();
                 $events = $pdo->query("SELECT * FROM events ORDER BY created_at ASC")->fetchAll();
+                $pointsActive = isPointsSystemActive($pdo);
                 
                 // Decode team members list
                 foreach ($teams as &$t) {
@@ -152,8 +181,98 @@ switch ($route) {
                     "visitors" => $visitors,
                     "faculty" => $faculty,
                     "scans" => $scans,
-                    "events" => $events
+                    "events" => $events,
+                    "pointsActive" => $pointsActive
                 ]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(["error" => $e->getMessage()]);
+            }
+        }
+        break;
+
+    case 'toggle-points':
+        if ($method === 'POST') {
+            $input = getJsonInput();
+            $pointsActive = $input['pointsActive'] ?? true;
+            $val = ($pointsActive === true || $pointsActive === 'true' || $pointsActive === '1') ? '1' : '0';
+            try {
+                $stmt = $pdo->prepare("SELECT key FROM settings WHERE key = 'points_active'");
+                $stmt->execute();
+                if ($stmt->fetch()) {
+                    $up = $pdo->prepare("UPDATE settings SET value = ? WHERE key = 'points_active'");
+                    $up->execute([$val]);
+                } else {
+                    $ins = $pdo->prepare("INSERT INTO settings (key, value) VALUES ('points_active', ?)");
+                    $ins->execute([$val]);
+                }
+                echo json_encode(["success" => true, "pointsActive" => $val === '1']);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(["error" => $e->getMessage()]);
+            }
+        }
+        break;
+
+    case 'delete-team':
+        if ($method === 'POST') {
+            $input = getJsonInput();
+            $id = $input['id'] ?? '';
+            if (empty($id)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Team ID is required."]);
+                exit();
+            }
+            try {
+                $stmt = $pdo->prepare("DELETE FROM teams WHERE id = ?");
+                $stmt->execute([$id]);
+                $stmt2 = $pdo->prepare("DELETE FROM scans WHERE team_id = ?");
+                $stmt2->execute([$id]);
+                echo json_encode(["success" => true, "message" => "Team deleted successfully."]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(["error" => $e->getMessage()]);
+            }
+        }
+        break;
+
+    case 'delete-visitor':
+        if ($method === 'POST') {
+            $input = getJsonInput();
+            $id = $input['id'] ?? '';
+            if (empty($id)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Visitor ID is required."]);
+                exit();
+            }
+            try {
+                $stmt = $pdo->prepare("DELETE FROM visitors WHERE id = ?");
+                $stmt->execute([$id]);
+                $stmt2 = $pdo->prepare("DELETE FROM scans WHERE scanner_id = ?");
+                $stmt2->execute([$id]);
+                echo json_encode(["success" => true, "message" => "Visitor deleted successfully."]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(["error" => $e->getMessage()]);
+            }
+        }
+        break;
+
+    case 'delete-faculty':
+        if ($method === 'POST') {
+            $input = getJsonInput();
+            $id = $input['id'] ?? '';
+            if (empty($id)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Faculty ID is required."]);
+                exit();
+            }
+            try {
+                $stmt = $pdo->prepare("DELETE FROM faculty WHERE id = ?");
+                $stmt->execute([$id]);
+                $stmt2 = $pdo->prepare("DELETE FROM scans WHERE scanner_id = ?");
+                $stmt2->execute([$id]);
+                echo json_encode(["success" => true, "message" => "Faculty deleted successfully."]);
             } catch (Exception $e) {
                 http_response_code(500);
                 echo json_encode(["error" => $e->getMessage()]);
@@ -483,6 +602,12 @@ switch ($route) {
                 exit();
             }
 
+            if (!isPointsSystemActive($pdo)) {
+                http_response_code(403);
+                echo json_encode(["error" => "Point allocation is currently STOPPED by Administrator. QR scanning is temporarily paused."]);
+                exit();
+            }
+
             try {
                 $stmt = $pdo->prepare("SELECT id FROM teams WHERE id = ?");
                 $stmt->execute([$teamId]);
@@ -542,6 +667,12 @@ switch ($route) {
             if (empty($teamId) || empty($code)) {
                 http_response_code(400);
                 echo json_encode(["error" => "Team ID and verification code are required."]);
+                exit();
+            }
+
+            if (!isPointsSystemActive($pdo)) {
+                http_response_code(403);
+                echo json_encode(["error" => "Point allocation is currently STOPPED by Administrator."]);
                 exit();
             }
 

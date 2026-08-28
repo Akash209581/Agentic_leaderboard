@@ -7,7 +7,7 @@ import KeerthiAdminPage from './components/KeerthiAdminPage';
 import FullScreenLeaderboard from './components/FullScreenLeaderboard';
 
 export default function App() {
-  const { teams, visitors, faculty, scans, events } = useLocalStorageSync();
+  const { teams, visitors, faculty, scans, events, pointsActive, isInitialLoading } = useLocalStorageSync();
   const [activeTab, setActiveTab] = useState('student');
   const [isKeerthiRoute, setIsKeerthiRoute] = useState(false);
 
@@ -36,7 +36,7 @@ export default function App() {
   const isFullScreenLeaderboard = typeof window !== 'undefined' && window.location.search.includes('view=leaderboard');
 
   if (isFullScreenLeaderboard) {
-    return <FullScreenLeaderboard teams={teams} visitors={visitors} faculty={faculty} scans={scans} events={events} />;
+    return <FullScreenLeaderboard teams={teams} visitors={visitors} faculty={faculty} scans={scans} events={events} pointsActive={pointsActive} />;
   }
 
   // If directly accessing /Keerthimamisadmin
@@ -75,6 +75,7 @@ export default function App() {
             faculty={faculty}
             scans={scans}
             events={events}
+            pointsActive={pointsActive}
             onExit={() => {
               setIsKeerthiRoute(false);
               window.history.pushState({}, '', window.location.pathname.replace(/keerthimamisadmin/gi, '') || '/');
@@ -140,6 +141,8 @@ export default function App() {
             teams={teams} 
             scans={scans} 
             events={events}
+            pointsActive={pointsActive}
+            isInitialLoading={isInitialLoading}
           />
         )}
         
@@ -148,7 +151,9 @@ export default function App() {
             teams={teams} 
             visitors={visitors} 
             faculty={faculty} 
-            scans={scans} 
+            scans={scans}
+            pointsActive={pointsActive}
+            isInitialLoading={isInitialLoading}
           />
         )}
         
@@ -159,6 +164,7 @@ export default function App() {
             faculty={faculty} 
             scans={scans} 
             events={events}
+            pointsActive={pointsActive}
           />
         )}
       </main>

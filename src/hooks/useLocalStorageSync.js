@@ -6,6 +6,8 @@ export const useLocalStorageSync = () => {
   const [faculty, setFaculty] = useState([]);
   const [scans, setScans] = useState([]);
   const [events, setEvents] = useState([]);
+  const [pointsActive, setPointsActive] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -18,9 +20,14 @@ export const useLocalStorageSync = () => {
           setFaculty(data.faculty || []);
           setScans(data.scans || []);
           setEvents(data.events || []);
+          if (data.pointsActive !== undefined) {
+            setPointsActive(Boolean(data.pointsActive));
+          }
         }
       } catch (err) {
         console.error('Failed to sync data from server database', err);
+      } finally {
+        setIsInitialLoading(false);
       }
     };
 
@@ -38,5 +45,6 @@ export const useLocalStorageSync = () => {
     };
   }, []);
 
-  return { teams, visitors, faculty, scans, events };
+  return { teams, visitors, faculty, scans, events, pointsActive, isInitialLoading };
 };
+

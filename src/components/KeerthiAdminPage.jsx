@@ -1,7 +1,24 @@
 import React, { useState } from 'react';
-import { seedMockData, clearDatabase, addEvent, deleteEvent } from '../utils/db';
+import { 
+  seedMockData, 
+  clearDatabase, 
+  addEvent, 
+  deleteEvent, 
+  togglePointsStatus,
+  deleteTeam,
+  deleteVisitor,
+  deleteFaculty
+} from '../utils/db';
 
-export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = [], scans = [], events = [], onExit }) {
+export default function KeerthiAdminPage({ 
+  teams = [], 
+  visitors = [], 
+  faculty = [], 
+  scans = [], 
+  events = [], 
+  pointsActive = true,
+  onExit 
+}) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem('keerthi_admin_logged_in') === 'true';
   });
@@ -12,10 +29,11 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Event creation state
+  // Admin tabs & filters
+  const [activeAdminTab, setActiveAdminTab] = useState('events_db'); // 'events_db' | 'teams' | 'participants' | 'scans'
   const [newEventName, setNewEventName] = useState('');
-  const [activeAdminTab, setActiveAdminTab] = useState('events_db'); // 'events_db' | 'teams' | 'scans'
   const [searchTeam, setSearchTeam] = useState('');
+  const [searchParticipant, setSearchParticipant] = useState('');
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -42,11 +60,12 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
   // Password confirmation modal state for critical actions
   const [securityModal, setSecurityModal] = useState({
     isOpen: false,
-    actionType: '', // 'reset' | 'seed' | 'delete_event'
+    actionType: '', // 'reset' | 'seed' | 'delete_event' | 'delete_team' | 'delete_visitor' | 'delete_faculty' | 'toggle_points'
     title: '',
     description: '',
-    eventId: null,
-    eventName: '',
+    targetId: null,
+    targetName: '',
+    nextPointsState: null,
     error: '',
     inputPassword: '',
     isProcessing: false
@@ -63,8 +82,25 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
       title = '🌱 Security Verification: Seed Mock Data';
       description = 'This will replace existing database records with mock student teams, visitors, faculty, and scan history. Enter your admin password to proceed.';
     } else if (actionType === 'delete_event') {
-      title = `🗑️ Security Verification: Delete Event "${extra.eventName}"`;
-      description = `Are you sure you want to delete the event "${extra.eventName}"? Enter your admin password to confirm deletion.`;
+      title = `🗑️ Security Verification: Delete Event "${extra.targetName}"`;
+      description = `Are you sure you want to delete the event "${extra.targetName}"? Enter your admin password to confirm deletion.`;
+    } else if (actionType === 'delete_team') {
+      title = `🗑️ Delete Team: "${extra.targetName}" (${extra.targetId})`;
+      description = `This will permanently delete team "${extra.targetName}" and remove all related scan logs and points. Enter your admin password to confirm.`;
+    } else if (actionType === 'delete_visitor') {
+      title = `🗑️ Delete Student Visitor: "${extra.targetName}" (${extra.targetId})`;
+      description = `This will permanently remove visitor account "${extra.targetName}" and clear their scan records. Enter your admin password to confirm.`;
+    } else if (actionType === 'delete_faculty') {
+      title = `🗑️ Delete Faculty Member: "${extra.targetName}" (${extra.targetId})`;
+      description = `This will permanently remove faculty account "${extra.targetName}" and clear their evaluation scan records. Enter your admin password to confirm.`;
+    } else if (actionType === 'toggle_points') {
+      const willBeActive = extra.nextPointsState;
+      title = willBeActive 
+        ? '▶️ Resume Points Scoring & QR Scans' 
+        : '⏸️ Stop / Freeze Points Scoring & QR Scans';
+      description = willBeActive 
+        ? 'This will resume point allocation across the hackathon. Visitors and faculty will be able to scan student team QR codes again.' 
+        : 'This will freeze point allocation across the hackathon. All QR scanning and score updates will be paused immediately.';
     }
 
     setSecurityModal({
@@ -72,8 +108,9 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
       actionType,
       title,
       description,
-      eventId: extra.eventId || null,
-      eventName: extra.eventName || '',
+      targetId: extra.targetId || null,
+      targetName: extra.targetName || '',
+      nextPointsState: extra.nextPointsState !== undefined ? extra.nextPointsState : null,
       error: '',
       inputPassword: '',
       isProcessing: false
@@ -86,8 +123,9 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
       actionType: '',
       title: '',
       description: '',
-      eventId: null,
-      eventName: '',
+      targetId: null,
+      targetName: '',
+      nextPointsState: null,
       error: '',
       inputPassword: '',
       isProcessing: false
@@ -114,8 +152,20 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
         await seedMockData();
         alert('✅ Database successfully seeded with mock demo data!');
       } else if (securityModal.actionType === 'delete_event') {
-        await deleteEvent(securityModal.eventId);
-        alert(`✅ Event "${securityModal.eventName}" was successfully deleted.`);
+        await deleteEvent(securityModal.targetId);
+        alert(`✅ Event "${securityModal.targetName}" was successfully deleted.`);
+      } else if (securityModal.actionType === 'delete_team') {
+        await deleteTeam(securityModal.targetId);
+        alert(`✅ Team "${securityModal.targetName}" (${securityModal.targetId}) was deleted successfully.`);
+      } else if (securityModal.actionType === 'delete_visitor') {
+        await deleteVisitor(securityModal.targetId);
+        alert(`✅ Visitor "${securityModal.targetName}" (${securityModal.targetId}) was deleted successfully.`);
+      } else if (securityModal.actionType === 'delete_faculty') {
+        await deleteFaculty(securityModal.targetId);
+        alert(`✅ Faculty "${securityModal.targetName}" (${securityModal.targetId}) was deleted successfully.`);
+      } else if (securityModal.actionType === 'toggle_points') {
+        await togglePointsStatus(securityModal.nextPointsState);
+        alert(securityModal.nextPointsState ? '✅ Points allocation has been RESUMED / STARTED.' : '⏸️ Points allocation has been STOPPED / PAUSED.');
       }
       handleCloseSecurityModal();
     } catch (err) {
@@ -225,12 +275,24 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
     );
   }
 
-  // Filtered teams for unique code viewer
+  // Filtered teams for unique code & delete viewer
   const filteredTeams = teams.filter(t => 
     t.name?.toLowerCase().includes(searchTeam.toLowerCase()) ||
     t.leaderName?.toLowerCase().includes(searchTeam.toLowerCase()) ||
     t.leaderRegNo?.toLowerCase().includes(searchTeam.toLowerCase()) ||
     t.id?.toLowerCase().includes(searchTeam.toLowerCase())
+  );
+
+  // Combined and filtered participants (visitors + faculty)
+  const allParticipants = [
+    ...visitors.map(v => ({ ...v, type: 'visitor', roleLabel: 'Student Visitor' })),
+    ...faculty.map(f => ({ ...f, type: 'faculty', roleLabel: 'Faculty Evaluator' }))
+  ];
+
+  const filteredParticipants = allParticipants.filter(p =>
+    p.name?.toLowerCase().includes(searchParticipant.toLowerCase()) ||
+    p.id?.toLowerCase().includes(searchParticipant.toLowerCase()) ||
+    (p.mobile && p.mobile.includes(searchParticipant))
   );
 
   return (
@@ -245,7 +307,7 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
               <span className="keerthi-admin-badge">AUTHORIZED ADMIN</span>
             </div>
             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>
-              Manage hackathon events, database operations, team recovery codes, and live scanning configurations.
+              Manage hackathon events, points scoring, team/individual deletions, database operations, and recovery codes.
             </p>
           </div>
         </div>
@@ -259,6 +321,78 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
           <button onClick={handleLogout} className="btn btn-danger" style={{ fontSize: '13px', padding: '8px 16px' }}>
             🔒 Logout
           </button>
+        </div>
+      </div>
+
+      {/* Points System Live Control Banner */}
+      <div className="glass-panel" style={{
+        padding: '18px 24px',
+        marginBottom: '24px',
+        background: pointsActive ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%)' : 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%)',
+        border: pointsActive ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(239, 68, 68, 0.4)',
+        borderRadius: '16px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '16px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{
+            fontSize: '28px',
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            background: pointsActive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {pointsActive ? '⚡' : '⏸️'}
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                POINTS ALLOCATION STATUS:
+              </span>
+              <span style={{
+                padding: '4px 10px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: '800',
+                letterSpacing: '0.5px',
+                background: pointsActive ? '#10b981' : '#ef4444',
+                color: '#ffffff'
+              }}>
+                {pointsActive ? '● LIVE & ACTIVE' : '⏸️ STOPPED / FROZEN'}
+              </span>
+            </div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+              {pointsActive 
+                ? 'Student teams can receive points through verified QR scans from Visitors and Faculty.' 
+                : 'QR scanning and point scoring are paused. No points can be awarded until resumed.'}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          {pointsActive ? (
+            <button
+              onClick={() => handleOpenSecurityModal('toggle_points', { nextPointsState: false })}
+              className="btn btn-danger"
+              style={{ padding: '10px 20px', fontWeight: '800', fontSize: '13.5px', borderRadius: '10px' }}
+            >
+              ⏸️ Stop Points Allocation
+            </button>
+          ) : (
+            <button
+              onClick={() => handleOpenSecurityModal('toggle_points', { nextPointsState: true })}
+              className="btn btn-primary"
+              style={{ padding: '10px 20px', fontWeight: '800', fontSize: '13.5px', borderRadius: '10px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+            >
+              ▶️ Start / Resume Points
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,7 +410,14 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
           className={`btn ${activeAdminTab === 'teams' ? 'btn-primary' : 'btn-outline'}`}
           style={{ padding: '8px 18px', fontSize: '13px' }}
         >
-          👥 Registered Teams & Recovery Codes ({teams.length})
+          👥 Registered Teams ({teams.length})
+        </button>
+        <button
+          onClick={() => setActiveAdminTab('participants')}
+          className={`btn ${activeAdminTab === 'participants' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ padding: '8px 18px', fontSize: '13px' }}
+        >
+          🎟️ Individual Participants ({allParticipants.length})
         </button>
         <button
           onClick={() => setActiveAdminTab('scans')}
@@ -351,7 +492,7 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
                         </span>
                       </div>
                       <button
-                        onClick={() => handleOpenSecurityModal('delete_event', { eventId: evt.id, eventName: evt.name })}
+                        onClick={() => handleOpenSecurityModal('delete_event', { targetId: evt.id, targetName: evt.name })}
                         className="btn btn-danger"
                         style={{
                           padding: '4px 10px',
@@ -402,19 +543,19 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
         </div>
       )}
 
-      {/* TAB 2: Registered Teams & Unique Recovery Codes */}
+      {/* TAB 2: Registered Teams & Unique Recovery Codes + Delete Team */}
       {activeAdminTab === 'teams' && (
         <div className="glass-panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h3 style={{ margin: 0, fontSize: '18px' }}>👥 Registered Student Teams & Secret Recovery Codes</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '4px 0 0 0' }}>
-                Use this table if a student team forgot their login password and needs their unique recovery code.
+                View registration details, retrieve unique codes for forgot password, or delete teams.
               </p>
             </div>
             <input
               type="text"
-              placeholder="Search team name or leader reg no..."
+              placeholder="Search team name, ID, or leader..."
               value={searchTeam}
               onChange={(e) => setSearchTeam(e.target.value)}
               style={{
@@ -441,12 +582,13 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
                   <th>Leader Reg No</th>
                   <th>Points</th>
                   <th style={{ color: 'var(--accent-gold)' }}>🔑 Unique Recovery Code</th>
+                  <th style={{ textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTeams.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '24px' }}>
+                    <td colSpan="8" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '24px' }}>
                       No teams found.
                     </td>
                   </tr>
@@ -478,6 +620,16 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
                           {t.uniqueCode || t.unique_code || 'N/A'}
                         </span>
                       </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleOpenSecurityModal('delete_team', { targetId: t.id, targetName: t.name })}
+                          className="btn btn-danger"
+                          style={{ padding: '4px 10px', fontSize: '11px' }}
+                          title={`Delete Team ${t.name}`}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -487,7 +639,96 @@ export default function KeerthiAdminPage({ teams = [], visitors = [], faculty = 
         </div>
       )}
 
-      {/* TAB 3: Scan Activity Overview */}
+      {/* TAB 3: Registered Participants Directory (Visitors & Faculty) + Delete Person */}
+      {activeAdminTab === 'participants' && (
+        <div className="glass-panel" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '18px' }}>🎟️ Individual Participants Directory (Visitors & Faculty)</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '4px 0 0 0' }}>
+                View all registered audience student visitors and faculty evaluators, or remove individual accounts.
+              </p>
+            </div>
+            <input
+              type="text"
+              placeholder="Search by name, ID, or mobile..."
+              value={searchParticipant}
+              onChange={(e) => setSearchParticipant(e.target.value)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: '8px',
+                padding: '8px 14px',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none',
+                minWidth: '260px'
+              }}
+            />
+          </div>
+
+          <div className="table-responsive">
+            <table className="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Participant ID</th>
+                  <th>Full Name</th>
+                  <th>Role</th>
+                  <th>Mobile / Login ID</th>
+                  <th>Earned Points</th>
+                  <th>Registered At</th>
+                  <th style={{ textAlign: 'center' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredParticipants.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '24px' }}>
+                      No participants found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredParticipants.map((p) => (
+                    <tr key={p.id} className="leaderboard-row">
+                      <td style={{ color: 'var(--accent-cyan)', fontWeight: 'bold', fontFamily: 'monospace' }}>{p.id}</td>
+                      <td style={{ fontWeight: '600' }}>{p.name}</td>
+                      <td>
+                        <span className="accent-badge" style={{
+                          fontSize: '11px',
+                          background: p.type === 'faculty' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                          color: p.type === 'faculty' ? 'var(--accent-warning)' : 'var(--accent-tech)'
+                        }}>
+                          {p.roleLabel}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: 'monospace' }}>{p.mobile || p.id}</td>
+                      <td style={{ fontWeight: 'bold', color: 'var(--accent-gold)' }}>{p.points || 0} pts</td>
+                      <td style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+                        {p.registeredAt ? new Date(p.registeredAt).toLocaleString() : 'N/A'}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleOpenSecurityModal(
+                            p.type === 'visitor' ? 'delete_visitor' : 'delete_faculty', 
+                            { targetId: p.id, targetName: p.name }
+                          )}
+                          className="btn btn-danger"
+                          style={{ padding: '4px 10px', fontSize: '11px' }}
+                          title={`Delete ${p.name}`}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: Scan Activity Overview */}
       {activeAdminTab === 'scans' && (
         <div className="glass-panel" style={{ padding: '24px' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>⚡ Real-time Scan Verification Feed</h3>

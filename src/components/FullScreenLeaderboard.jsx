@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function FullScreenLeaderboard({ teams, visitors, faculty, scans, events }) {
+export default function FullScreenLeaderboard({ teams, visitors, faculty, scans, events, pointsActive = true }) {
   // Sort teams by points (highest first) and then by registration time
   const sortedTeams = [...teams].sort((a, b) => {
     if (b.points !== a.points) {

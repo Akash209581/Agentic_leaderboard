@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { registerTeam, loginTeam, approveScan, rejectScan, forgotPasswordTeam } from '../utils/db';
 
-export default function StudentPage({ teams, scans, events = [] }) {
+export default function StudentPage({ teams, scans, events = [], pointsActive = true, isInitialLoading = false }) {
   const [currentTeamId, setCurrentTeamId] = useState(() => {
     return sessionStorage.getItem('current_student_team_id') || null;
   });
@@ -139,9 +139,13 @@ export default function StudentPage({ teams, scans, events = [] }) {
         teamEvent,
         leaderPhoto
       );
-      setCurrentTeamId(team.id);
-      sessionStorage.setItem('current_student_team_id', team.id);
-      localStorage.removeItem('current_student_team_id');
+      if (team && team.id) {
+        setCurrentTeamId(team.id);
+        sessionStorage.setItem('current_student_team_id', team.id);
+        localStorage.removeItem('current_student_team_id');
+      } else {
+        throw new Error(team.error || 'Team registration failed. Please try again.');
+      }
     } catch (err) {
       setRegisterError(err.message);
     }
@@ -158,9 +162,13 @@ export default function StudentPage({ teams, scans, events = [] }) {
 
     try {
       const team = await loginTeam(loginTeamName.trim(), loginLeaderRegNo.trim());
-      setCurrentTeamId(team.id);
-      sessionStorage.setItem('current_student_team_id', team.id);
-      localStorage.removeItem('current_student_team_id');
+      if (team && team.id) {
+        setCurrentTeamId(team.id);
+        sessionStorage.setItem('current_student_team_id', team.id);
+        localStorage.removeItem('current_student_team_id');
+      } else {
+        throw new Error(team.error || 'Invalid credentials.');
+      }
     } catch (err) {
       setLoginError(err.message);
     }
@@ -196,9 +204,11 @@ export default function StudentPage({ teams, scans, events = [] }) {
       
       // Automatically log the user in using the retrieved registration number
       const team = await loginTeam(fpTeamName.trim(), result.leaderRegNo);
-      setCurrentTeamId(team.id);
-      sessionStorage.setItem('current_student_team_id', team.id);
-      localStorage.removeItem('current_student_team_id');
+      if (team && team.id) {
+        setCurrentTeamId(team.id);
+        sessionStorage.setItem('current_student_team_id', team.id);
+        localStorage.removeItem('current_student_team_id');
+      }
       
       // Reset FP states just in case
       setIsForgotPassword(false);
@@ -219,6 +229,11 @@ export default function StudentPage({ teams, scans, events = [] }) {
     e.preventDefault();
     setApprovalError('');
     setApprovalSuccess(false);
+
+    if (!pointsActive) {
+      setApprovalError('Point allocation is currently STOPPED by Administrator.');
+      return;
+    }
 
     if (!verifyCode.trim()) {
       setApprovalError('Please enter the 4-digit code.');
@@ -262,6 +277,16 @@ export default function StudentPage({ teams, scans, events = [] }) {
   const qrCodeUrl = currentTeam
     ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentTeam.id)}&color=0-0-0&bgcolor=255-255-255`
     : '';
+
+  // Show clean loading state during initial sync if student was previously signed in
+  if (isInitialLoading && currentTeamId && !currentTeam) {
+    return (
+      <div className="fade-in" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <div className="spinner" style={{ margin: '0 auto 16px auto', width: '36px', height: '36px' }}></div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Connecting to team dashboard...</p>
+      </div>
+    );
+  }
 
   // 1. Not logged in view
   if (!currentTeam) {
@@ -741,6 +766,28 @@ export default function StudentPage({ teams, scans, events = [] }) {
 
         {/* Right Column: QR Code Card & Scan History Card */}
         <div className="dashboard-main-content">
+          {/* Points Paused Alert Banner */}
+          {!pointsActive && (
+            <div className="alert-pop" style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '16px',
+              padding: '14px 18px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <span style={{ fontSize: '24px' }}>⏸️</span>
+              <div>
+                <strong style={{ color: '#dc2626', fontSize: '14px' }}>Points Allocation is Currently Paused</strong>
+                <p style={{ margin: '2px 0 0 0', color: '#991b1b', fontSize: '12.5px' }}>
+                  The Administrator has temporarily paused points scoring. Incoming scan approvals are currently on hold.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* QR Code Presentation Card */}
           <div className="qr-presentation-card glass-panel">
             <div className="panel-header-inline">

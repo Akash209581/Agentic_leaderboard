@@ -213,3 +213,45 @@ export const deleteEvent = async (id) => {
   window.dispatchEvent(new Event('local-db-update'));
   return data;
 };
+
+// Toggle Points Active / Stopped (Admin)
+export const togglePointsStatus = async (pointsActive) => {
+  const data = await safeFetch('/api/toggle-points', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pointsActive })
+  });
+  window.dispatchEvent(new Event('local-db-update'));
+  return data;
+};
+
+// Delete Operations (Admin)
+export const deleteTeam = async (id) => {
+  const data = await safeFetch('/api/delete-team', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  window.dispatchEvent(new Event('local-db-update'));
+  return data;
+};
+
+export const deleteVisitor = async (id) => {
+  const data = await safeFetch('/api/delete-visitor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  window.dispatchEvent(new Event('local-db-update'));
+  return data;
+};
+
+export const deleteFaculty = async (id) => {
+  const data = await safeFetch('/api/delete-faculty', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  window.dispatchEvent(new Event('local-db-update'));
+  return data;
+};

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { seedMockData, clearDatabase, addEvent, deleteEvent } from '../utils/db';
 
-export default function AdminPage({ teams, visitors, faculty, scans, events = [] }) {
+export default function AdminPage({ teams, visitors, faculty, scans, events = [], pointsActive = true }) {
   // Event Management Input State
   const [newEventName, setNewEventName] = useState('');
 
@@ -290,14 +290,26 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
     <div className="admin-dashboard fade-in">
       <div className="analytics-hero-header glass-panel">
         <div className="hero-header-text">
-          <div className="live-status-pill">
-            <span className="live-dot-pulse"></span>
-            <span>LIVE LEADERBOARD</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+            <div className="live-status-pill">
+              <span className="live-dot-pulse"></span>
+              <span>LIVE LEADERBOARD</span>
+            </div>
+            <div style={{
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '11px',
+              fontWeight: '700',
+              background: pointsActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              color: pointsActive ? '#10b981' : '#ef4444',
+              border: pointsActive ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)'
+            }}>
+              {pointsActive ? '● POINTS ALLOCATION ACTIVE' : '⏸️ POINTS ALLOCATION PAUSED'}
+            </div>
           </div>
           <h2>Analytics & Standings Arena</h2>
           <p>Real-time telemetry, participant stats, and live scoreboard updates for Agentic AI Day.</p>
         </div>
-
       </div>
 
       {/* Analytics Cards */}

@@ -8,7 +8,7 @@ import {
   initiateScan 
 } from '../utils/db';
 
-export default function VisitorPage({ teams, visitors, faculty, scans }) {
+export default function VisitorPage({ teams, visitors, faculty, scans, pointsActive = true, isInitialLoading = false }) {
   // Portal toggle: 'visitor' or 'faculty'
   const [userRole, setUserRole] = useState('visitor');
   
@@ -27,6 +27,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const [showVisPassword, setShowVisPassword] = useState(false);
   const [visIsRegistering, setVisIsRegistering] = useState(false);
   const [visError, setVisError] = useState('');
+  const [isDuplicateVis, setIsDuplicateVis] = useState(false);
 
   // Faculty Register & Login State
   const [facId, setFacId] = useState('');
@@ -36,6 +37,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const [showFacPassword, setShowFacPassword] = useState(false);
   const [facIsRegistering, setFacIsRegistering] = useState(false);
   const [facError, setFacError] = useState('');
+  const [isDuplicateFac, setIsDuplicateFac] = useState(false);
 
   // Scan Action State
   const [selectedTeamId, setSelectedTeamId] = useState('');
@@ -51,6 +53,8 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   useEffect(() => {
     setVisError('');
     setFacError('');
+    setIsDuplicateVis(false);
+    setIsDuplicateFac(false);
     setVisName('');
     setVisMobile('');
     setVisPassword('');
@@ -128,6 +132,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const handleVisitorRegister = async (e) => {
     e.preventDefault();
     setVisError('');
+    setIsDuplicateVis(false);
 
     if (!visName.trim() || !visMobile.trim() || !visPassword) {
       setVisError('All fields are required.');
@@ -141,14 +146,24 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
     try {
       const user = await registerVisitor(visName.trim(), visMobile.trim(), visPassword);
-      setCurrentUserId(user.id);
-      setCurrentUserRole('visitor');
-      sessionStorage.setItem('current_user_role', 'visitor');
-      sessionStorage.setItem('current_user_id', user.id);
-      localStorage.removeItem('current_user_role');
-      localStorage.removeItem('current_user_id');
+      if (user && user.id) {
+        setCurrentUserId(user.id);
+        setCurrentUserRole('visitor');
+        sessionStorage.setItem('current_user_role', 'visitor');
+        sessionStorage.setItem('current_user_id', user.id);
+        localStorage.removeItem('current_user_role');
+        localStorage.removeItem('current_user_id');
+      } else {
+        throw new Error(user.error || 'Registration failed. Please try again.');
+      }
     } catch (err) {
-      setVisError(err.message);
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('already registered')) {
+        setIsDuplicateVis(true);
+        setVisError('This mobile number is already registered! Please log in with your existing password.');
+      } else {
+        setVisError(msg);
+      }
     }
   };
 
@@ -156,6 +171,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const handleVisitorLogin = async (e) => {
     e.preventDefault();
     setVisError('');
+    setIsDuplicateVis(false);
 
     if (!visMobile.trim() || !visPassword) {
       setVisError('Mobile number and password are required.');
@@ -164,12 +180,16 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
     try {
       const user = await loginVisitor(visMobile.trim(), visPassword);
-      setCurrentUserId(user.id);
-      setCurrentUserRole('visitor');
-      sessionStorage.setItem('current_user_role', 'visitor');
-      sessionStorage.setItem('current_user_id', user.id);
-      localStorage.removeItem('current_user_role');
-      localStorage.removeItem('current_user_id');
+      if (user && user.id) {
+        setCurrentUserId(user.id);
+        setCurrentUserRole('visitor');
+        sessionStorage.setItem('current_user_role', 'visitor');
+        sessionStorage.setItem('current_user_id', user.id);
+        localStorage.removeItem('current_user_role');
+        localStorage.removeItem('current_user_id');
+      } else {
+        throw new Error(user.error || 'Login failed. Please check credentials.');
+      }
     } catch (err) {
       setVisError(err.message);
     }
@@ -179,6 +199,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const handleFacultyRegister = async (e) => {
     e.preventDefault();
     setFacError('');
+    setIsDuplicateFac(false);
 
     if (!facId.trim() || !facName.trim() || !facPassword) {
       setFacError('All fields are required.');
@@ -192,14 +213,24 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
     try {
       const user = await registerFaculty(facId.trim(), facName.trim(), facPassword);
-      setCurrentUserId(user.id);
-      setCurrentUserRole('faculty');
-      sessionStorage.setItem('current_user_role', 'faculty');
-      sessionStorage.setItem('current_user_id', user.id);
-      localStorage.removeItem('current_user_role');
-      localStorage.removeItem('current_user_id');
+      if (user && user.id) {
+        setCurrentUserId(user.id);
+        setCurrentUserRole('faculty');
+        sessionStorage.setItem('current_user_role', 'faculty');
+        sessionStorage.setItem('current_user_id', user.id);
+        localStorage.removeItem('current_user_role');
+        localStorage.removeItem('current_user_id');
+      } else {
+        throw new Error(user.error || 'Registration failed. Please try again.');
+      }
     } catch (err) {
-      setFacError(err.message);
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('already registered')) {
+        setIsDuplicateFac(true);
+        setFacError('This Faculty ID is already registered! Please log in with your existing password.');
+      } else {
+        setFacError(msg);
+      }
     }
   };
 
@@ -207,6 +238,7 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const handleFacultyLogin = async (e) => {
     e.preventDefault();
     setFacError('');
+    setIsDuplicateFac(false);
 
     if (!facId.trim() || !facPassword) {
       setFacError('Faculty ID and password are required.');
@@ -215,12 +247,16 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
     try {
       const user = await loginFaculty(facId.trim(), facPassword);
-      setCurrentUserId(user.id);
-      setCurrentUserRole('faculty');
-      sessionStorage.setItem('current_user_role', 'faculty');
-      sessionStorage.setItem('current_user_id', user.id);
-      localStorage.removeItem('current_user_role');
-      localStorage.removeItem('current_user_id');
+      if (user && user.id) {
+        setCurrentUserId(user.id);
+        setCurrentUserRole('faculty');
+        sessionStorage.setItem('current_user_role', 'faculty');
+        sessionStorage.setItem('current_user_id', user.id);
+        localStorage.removeItem('current_user_role');
+        localStorage.removeItem('current_user_id');
+      } else {
+        throw new Error(user.error || 'Login failed. Please check credentials.');
+      }
     } catch (err) {
       setFacError(err.message);
     }
@@ -241,6 +277,12 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   // Initiate QR scan simulation
   const handleScanTeam = async (teamIdInput) => {
     setScanError('');
+
+    if (!pointsActive) {
+      setScanError('Point allocation is currently STOPPED by Administrator. QR scanning is temporarily paused.');
+      return;
+    }
+
     const targetTeamId = teamIdInput.trim().toUpperCase();
 
     if (!targetTeamId) {
@@ -275,6 +317,16 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
         .filter(s => s.scannerId === currentUser.id && s.status === 'approved')
         .sort((a, b) => b.approvedAt - a.approvedAt)
     : [];
+
+  // Show clean loading state during initial sync if user was previously signed in
+  if (isInitialLoading && currentUserId && !currentUser) {
+    return (
+      <div className="fade-in" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <div className="spinner" style={{ margin: '0 auto 16px auto', width: '36px', height: '36px' }}></div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Connecting to session...</p>
+      </div>
+    );
+  }
 
   // --- Auth Pages (Unauthenticated) ---
   if (!currentUser) {
@@ -314,7 +366,25 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
               <p>Log in or sign up to scan student team QR codes and earn points.</p>
             </div>
 
-            {visError && <div className="error-message alert-pop">{visError}</div>}
+            {visError && (
+              <div className="error-message alert-pop" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span>{visError}</span>
+                {isDuplicateVis && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVisIsRegistering(false);
+                      setVisError('');
+                      setIsDuplicateVis(false);
+                    }}
+                    className="btn btn-outline"
+                    style={{ fontSize: '12px', padding: '6px 12px', alignSelf: 'center', background: '#ffffff', color: '#dc2626' }}
+                  >
+                    👉 Click Here to Sign In Instead
+                  </button>
+                )}
+              </div>
+            )}
 
             {visIsRegistering ? (
               <form onSubmit={handleVisitorRegister} className="registration-form">
@@ -469,7 +539,25 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
               <p>Access scanner to validate student hackathon team QR codes and distribute points.</p>
             </div>
 
-            {facError && <div className="error-message alert-pop">{facError}</div>}
+            {facError && (
+              <div className="error-message alert-pop" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span>{facError}</span>
+                {isDuplicateFac && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFacIsRegistering(false);
+                      setFacError('');
+                      setIsDuplicateFac(false);
+                    }}
+                    className="btn btn-outline"
+                    style={{ fontSize: '12px', padding: '6px 12px', alignSelf: 'center', background: '#ffffff', color: '#dc2626' }}
+                  >
+                    👉 Click Here to Sign In Instead
+                  </button>
+                )}
+              </div>
+            )}
 
             {facIsRegistering ? (
               <form onSubmit={handleFacultyRegister} className="registration-form">
@@ -791,6 +879,28 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
 
         {/* Right Column: QR Scanner & Scan Feed */}
         <div className="dashboard-main-content">
+          {/* Points Paused Alert Banner */}
+          {!pointsActive && (
+            <div className="alert-pop" style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '16px',
+              padding: '14px 18px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <span style={{ fontSize: '24px' }}>⏸️</span>
+              <div>
+                <strong style={{ color: '#dc2626', fontSize: '14px' }}>Points Allocation is Currently Paused</strong>
+                <p style={{ margin: '2px 0 0 0', color: '#991b1b', fontSize: '12.5px' }}>
+                  The Administrator has temporarily paused points scoring. You will be able to scan again once scoring is resumed.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Scanner Interactive Card */}
           <div className="qr-presentation-card glass-panel">
             <div className="panel-header-inline">
@@ -817,15 +927,17 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
                 }}
                 className="btn btn-pill-action"
                 style={{
-                  background: cameraActive 
-                    ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
-                    : 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #8b5cf6 100%)'
+                  background: !pointsActive
+                    ? '#94a3b8'
+                    : cameraActive 
+                      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                      : 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #8b5cf6 100%)'
                 }}
-                disabled={isScanning}
+                disabled={isScanning || !pointsActive}
               >
-                <span className="btn-icon-sq">{cameraActive ? '🛑' : '📷'}</span>
+                <span className="btn-icon-sq">{!pointsActive ? '⏸️' : cameraActive ? '🛑' : '📷'}</span>
                 <span className="btn-text-main">
-                  {cameraActive ? 'Close Camera Scanner' : 'Launch Camera Scanner'}
+                  {!pointsActive ? 'Point Scanning Paused by Admin' : cameraActive ? 'Close Camera Scanner' : 'Launch Camera Scanner'}
                 </span>
                 <span className="btn-arrow-right">→</span>
               </button>
