@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { getApiUrl } from '../utils/db';
 
+// Polling intervals (ms)
+const POLL_INTERVAL_ACTIVE = 30000;  // 30s when tab is visible
+const POLL_INTERVAL_HIDDEN = 120000; // 2min when tab is in background
+
 export const useLocalStorageSync = () => {
   const [teams, setTeams] = useState([]);
   const [visitors, setVisitors] = useState([]);
@@ -15,13 +19,12 @@ export const useLocalStorageSync = () => {
     let isMounted = true;
     let timerId = null;
 
-    const fetchData = async () => {
-      // Pause polling if user switched away to another tab
-      if (document.hidden) {
-        timerId = setTimeout(fetchData, 2000);
-        return;
-      }
+    const scheduleNext = () => {
+      const delay = document.hidden ? POLL_INTERVAL_HIDDEN : POLL_INTERVAL_ACTIVE;
+      timerId = setTimeout(fetchData, delay);
+    };
 
+    const fetchData = async () => {
       if (isFetchingRef.current) return;
       isFetchingRef.current = true;
 
@@ -41,20 +44,20 @@ export const useLocalStorageSync = () => {
           }
         }
       } catch (err) {
-        // Silently catch to avoid flood
+        // Silently catch network errors
       } finally {
         isFetchingRef.current = false;
         if (isMounted) {
           setIsInitialLoading(false);
-          // Wait 2 seconds between completions
-          timerId = setTimeout(fetchData, 2000);
+          scheduleNext();
         }
       }
     };
 
-    fetchData(); // Initial run
+    fetchData(); // Initial load
 
     const handleImmediateUpdate = () => {
+      // Triggered after local actions (register, scan, etc.)
       if (!isFetchingRef.current) {
         if (timerId) clearTimeout(timerId);
         fetchData();
@@ -63,12 +66,12 @@ export const useLocalStorageSync = () => {
 
     const handleVisibilityChange = () => {
       if (!document.hidden && !isFetchingRef.current) {
+        // Tab became visible again - refresh immediately
         if (timerId) clearTimeout(timerId);
         fetchData();
       }
     };
 
-    // Custom event listener for immediate updates on local modifications
     window.addEventListener('local-db-update', handleImmediateUpdate);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -82,4 +85,3 @@ export const useLocalStorageSync = () => {
 
   return { teams, visitors, faculty, scans, events, pointsActive, isInitialLoading };
 };
-
