@@ -3,7 +3,7 @@ import { registerTeam, loginTeam, approveScan, rejectScan, forgotPasswordTeam } 
 
 export default function StudentPage({ teams, scans, events = [] }) {
   const [currentTeamId, setCurrentTeamId] = useState(() => {
-    return localStorage.getItem('current_student_team_id') || null;
+    return sessionStorage.getItem('current_student_team_id') || null;
   });
 
   const [teamEvent, setTeamEvent] = useState('');
@@ -140,7 +140,8 @@ export default function StudentPage({ teams, scans, events = [] }) {
         leaderPhoto
       );
       setCurrentTeamId(team.id);
-      localStorage.setItem('current_student_team_id', team.id);
+      sessionStorage.setItem('current_student_team_id', team.id);
+      localStorage.removeItem('current_student_team_id');
     } catch (err) {
       setRegisterError(err.message);
     }
@@ -158,13 +159,15 @@ export default function StudentPage({ teams, scans, events = [] }) {
     try {
       const team = await loginTeam(loginTeamName.trim(), loginLeaderRegNo.trim());
       setCurrentTeamId(team.id);
-      localStorage.setItem('current_student_team_id', team.id);
+      sessionStorage.setItem('current_student_team_id', team.id);
+      localStorage.removeItem('current_student_team_id');
     } catch (err) {
       setLoginError(err.message);
     }
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem('current_student_team_id');
     localStorage.removeItem('current_student_team_id');
     setCurrentTeamId(null);
     setTeamName('');
@@ -194,7 +197,8 @@ export default function StudentPage({ teams, scans, events = [] }) {
       // Automatically log the user in using the retrieved registration number
       const team = await loginTeam(fpTeamName.trim(), result.leaderRegNo);
       setCurrentTeamId(team.id);
-      localStorage.setItem('current_student_team_id', team.id);
+      sessionStorage.setItem('current_student_team_id', team.id);
+      localStorage.removeItem('current_student_team_id');
       
       // Reset FP states just in case
       setIsForgotPassword(false);

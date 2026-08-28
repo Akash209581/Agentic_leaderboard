@@ -13,8 +13,8 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
   const [userRole, setUserRole] = useState('visitor');
   
   // Auth state
-  const [currentUserId, setCurrentUserId] = useState(() => localStorage.getItem('current_user_id') || null);
-  const [currentUserRole, setCurrentUserRole] = useState(() => localStorage.getItem('current_user_role') || null);
+  const [currentUserId, setCurrentUserId] = useState(() => sessionStorage.getItem('current_user_id') || null);
+  const [currentUserRole, setCurrentUserRole] = useState(() => sessionStorage.getItem('current_user_role') || null);
 
   const currentUser = currentUserRole === 'visitor'
     ? visitors.find(v => v.id === currentUserId)
@@ -143,8 +143,10 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
       const user = await registerVisitor(visName.trim(), visMobile.trim(), visPassword);
       setCurrentUserId(user.id);
       setCurrentUserRole('visitor');
-      localStorage.setItem('current_user_role', 'visitor');
-      localStorage.setItem('current_user_id', user.id);
+      sessionStorage.setItem('current_user_role', 'visitor');
+      sessionStorage.setItem('current_user_id', user.id);
+      localStorage.removeItem('current_user_role');
+      localStorage.removeItem('current_user_id');
     } catch (err) {
       setVisError(err.message);
     }
@@ -164,8 +166,10 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
       const user = await loginVisitor(visMobile.trim(), visPassword);
       setCurrentUserId(user.id);
       setCurrentUserRole('visitor');
-      localStorage.setItem('current_user_role', 'visitor');
-      localStorage.setItem('current_user_id', user.id);
+      sessionStorage.setItem('current_user_role', 'visitor');
+      sessionStorage.setItem('current_user_id', user.id);
+      localStorage.removeItem('current_user_role');
+      localStorage.removeItem('current_user_id');
     } catch (err) {
       setVisError(err.message);
     }
@@ -190,8 +194,10 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
       const user = await registerFaculty(facId.trim(), facName.trim(), facPassword);
       setCurrentUserId(user.id);
       setCurrentUserRole('faculty');
-      localStorage.setItem('current_user_role', 'faculty');
-      localStorage.setItem('current_user_id', user.id);
+      sessionStorage.setItem('current_user_role', 'faculty');
+      sessionStorage.setItem('current_user_id', user.id);
+      localStorage.removeItem('current_user_role');
+      localStorage.removeItem('current_user_id');
     } catch (err) {
       setFacError(err.message);
     }
@@ -211,14 +217,18 @@ export default function VisitorPage({ teams, visitors, faculty, scans }) {
       const user = await loginFaculty(facId.trim(), facPassword);
       setCurrentUserId(user.id);
       setCurrentUserRole('faculty');
-      localStorage.setItem('current_user_role', 'faculty');
-      localStorage.setItem('current_user_id', user.id);
+      sessionStorage.setItem('current_user_role', 'faculty');
+      sessionStorage.setItem('current_user_id', user.id);
+      localStorage.removeItem('current_user_role');
+      localStorage.removeItem('current_user_id');
     } catch (err) {
       setFacError(err.message);
     }
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem('current_user_role');
+    sessionStorage.removeItem('current_user_id');
     localStorage.removeItem('current_user_role');
     localStorage.removeItem('current_user_id');
     setCurrentUserId(null);
