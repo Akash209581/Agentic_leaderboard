@@ -57,12 +57,16 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
     setFpSuccessMessage('');
   }, [isRegistering, isForgotPassword]);
 
-  // Default to first event if events are loaded
+  const availableEvents = (events && events.length > 0)
+    ? events
+    : [{ id: 'default-1', name: 'Agentic AI Day' }];
+
+  // Default to first event if not set
   useEffect(() => {
-    if (events && events.length > 0 && !teamEvent) {
-      setTeamEvent(events[0].name);
+    if (!teamEvent && availableEvents.length > 0) {
+      setTeamEvent(availableEvents[0].name);
     }
-  }, [events, teamEvent]);
+  }, [events, teamEvent, availableEvents]);
 
   const handleOtherMemberCountChange = (e) => {
     const count = parseInt(e.target.value, 10);
@@ -482,7 +486,7 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
                     required
                   >
                     <option value="">-- Choose Event --</option>
-                    {events.map(evt => (
+                    {availableEvents.map(evt => (
                       <option key={evt.id} value={evt.name}>
                         {evt.name}
                       </option>
