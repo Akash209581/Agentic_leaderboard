@@ -6,6 +6,16 @@ export const getApiUrl = (endpoint) => {
     return endpoint;
   }
   const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+
+  if (endpoint.startsWith('/api/')) {
+    const route = endpoint.replace(/^\/api\//, '');
+    if (import.meta.env.DEV) {
+      return `/api/${route}`;
+    }
+    // In production on Nginx/Apache, direct to api.php to avoid 404 / index.html fallback
+    return `${base}/api.php?route=${route}`;
+  }
+
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${base}${path}`;
 };
