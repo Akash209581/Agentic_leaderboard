@@ -1,5 +1,15 @@
 // Database helper calling the Express PostgreSQL backend API
 
+export const getApiUrl = (endpoint) => {
+  if (!endpoint) return '';
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${base}${path}`;
+};
+
 const safeParseJSON = async (res) => {
   const contentType = res.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
@@ -14,7 +24,8 @@ const safeParseJSON = async (res) => {
 
 const safeFetch = async (url, options = {}) => {
   try {
-    const res = await fetch(url, options);
+    const finalUrl = getApiUrl(url);
+    const res = await fetch(finalUrl, options);
     const data = await safeParseJSON(res);
     if (!res.ok) {
       throw new Error(data.error || `Request failed with status ${res.status}`);

@@ -86,24 +86,60 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
     });
   };
 
-  const handlePhotoChange = (e) => {
+  const [isRegisteringLoading, setIsRegisteringLoading] = useState(false);
+
+  const compressImage = (file, maxWidth = 600, maxHeight = 600, quality = 0.75) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Failed to load image for compression.'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('Failed to read image file.'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePhotoChange = async (e) => {
     setPhotoError('');
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      setPhotoError('Image size should be less than 2MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Image size should be less than 5MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setLeaderPhoto(reader.result);
-    };
-    reader.onerror = () => {
-      setPhotoError('Failed to read image file.');
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedDataUrl = await compressImage(file);
+      setLeaderPhoto(compressedDataUrl);
+    } catch (err) {
+      setPhotoError('Failed to process image file.');
+    }
   };
 
   const handleRegister = async (e) => {
@@ -136,6 +172,7 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
     const filledOtherMembers = otherMembers.filter(m => m.trim() !== '');
     const allMembers = [leaderName.trim(), ...filledOtherMembers];
 
+    setIsRegisteringLoading(true);
     try {
       const team = await registerTeam(
         teamName.trim(),
@@ -155,6 +192,8 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
       }
     } catch (err) {
       setRegisterError(err.message);
+    } finally {
+      setIsRegisteringLoading(false);
     }
   };
 
@@ -492,9 +531,22 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
                 </div>
               )}
 
-              <button type="submit" className="btn btn-pill-action btn-block">
-                <span className="btn-icon-sq">✨</span>
-                <span className="btn-text-main">Register Team & Generate QR</span>
+              {registerError && (
+                <div className="error-message alert-pop" style={{ marginTop: '8px', marginBottom: '8px' }}>
+                  {registerError}
+                </div>
+              )}
+
+              <button 
+                type="submit" 
+                disabled={isRegisteringLoading} 
+                className="btn btn-pill-action btn-block"
+                style={{ opacity: isRegisteringLoading ? 0.75 : 1, cursor: isRegisteringLoading ? 'wait' : 'pointer' }}
+              >
+                <span className="btn-icon-sq">{isRegisteringLoading ? '⏳' : '✨'}</span>
+                <span className="btn-text-main">
+                  {isRegisteringLoading ? 'Registering Team & Generating QR...' : 'Register Team & Generate QR'}
+                </span>
                 <span className="btn-arrow-right">→</span>
               </button>
 
