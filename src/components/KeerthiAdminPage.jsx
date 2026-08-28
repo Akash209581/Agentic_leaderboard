@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { 
   seedMockData, 
   clearDatabase, 
+  resetPointsOnly,
   addEvent, 
   deleteEvent, 
   togglePointsStatus,
@@ -60,7 +61,7 @@ export default function KeerthiAdminPage({
   // Password confirmation modal state for critical actions
   const [securityModal, setSecurityModal] = useState({
     isOpen: false,
-    actionType: '', // 'reset' | 'seed' | 'delete_event' | 'delete_team' | 'delete_visitor' | 'delete_faculty' | 'toggle_points'
+    actionType: '', // 'reset' | 'reset_points' | 'seed' | 'delete_event' | 'delete_team' | 'delete_visitor' | 'delete_faculty' | 'toggle_points'
     title: '',
     description: '',
     targetId: null,
@@ -78,6 +79,9 @@ export default function KeerthiAdminPage({
     if (actionType === 'reset') {
       title = '⚠️ Security Verification: Reset Entire Database';
       description = 'This will permanently delete all registered teams, visitors, faculty, scans, and custom events. Enter your admin password to confirm.';
+    } else if (actionType === 'reset_points') {
+      title = '🔄 Security Verification: Reset Points Only';
+      description = 'This will reset all points for Teams, Visitors, and Faculty to 0 and clear scan histories. All registered teams, leader logins, accounts, photos, and events will remain 100% intact! Enter your admin password to confirm.';
     } else if (actionType === 'seed') {
       title = '🌱 Security Verification: Seed Mock Data';
       description = 'This will replace existing database records with mock student teams, visitors, faculty, and scan history. Enter your admin password to proceed.';
@@ -148,6 +152,9 @@ export default function KeerthiAdminPage({
       if (securityModal.actionType === 'reset') {
         await clearDatabase();
         alert('✅ Database has been reset successfully!');
+      } else if (securityModal.actionType === 'reset_points') {
+        await resetPointsOnly();
+        alert('✅ All points and scan logs have been reset to 0! All teams, members, and user accounts remain intact.');
       } else if (securityModal.actionType === 'seed') {
         await seedMockData();
         alert('✅ Database successfully seeded with mock demo data!');
@@ -519,6 +526,22 @@ export default function KeerthiAdminPage({
             </p>
 
             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Reset Points Only */}
+              <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '12px' }}>
+                <h4 style={{ color: 'var(--accent-gold)', margin: '0 0 6px 0', fontSize: '14px' }}>🔄 Reset Points Only (Preserve All Accounts)</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '12px' }}>
+                  Resets scores for all teams, visitors, and faculty to <strong>0</strong> and clears scan logs. <strong>All registered teams, squad members, login credentials, and events stay completely safe!</strong>
+                </p>
+                <button 
+                  onClick={() => handleOpenSecurityModal('reset_points')} 
+                  className="btn" 
+                  style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', fontWeight: '700', border: 'none', padding: '10px' }}
+                >
+                  0️⃣ Reset All Points to Zero
+                </button>
+              </div>
+
+              {/* Factory Reset Database */}
               <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px' }}>
                 <h4 style={{ color: 'var(--accent-danger)', margin: '0 0 6px 0', fontSize: '14px' }}>⚠️ Factory Reset Database</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '12px' }}>
@@ -529,6 +552,7 @@ export default function KeerthiAdminPage({
                 </button>
               </div>
 
+              {/* Seed Demo Data */}
               <div style={{ padding: '16px', background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.2)', borderRadius: '12px' }}>
                 <h4 style={{ color: 'var(--accent-cyan)', margin: '0 0 6px 0', fontSize: '14px' }}>🌱 Seed Demo & Mock Data</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '12px' }}>

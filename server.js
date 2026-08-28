@@ -932,6 +932,20 @@ app.post('/api/seed', async (req, res) => {
   }
 });
 
+// Database Tools - Reset Points Only (Preserves teams, visitors, faculty, and events)
+app.post('/api/reset-points', async (req, res) => {
+  try {
+    await dbRun('UPDATE teams SET points = 0');
+    await dbRun('UPDATE visitors SET points = 0');
+    await dbRun('UPDATE faculty SET points = 0');
+    await dbRun('DELETE FROM scans');
+
+    res.json({ success: true, message: 'All points and scan logs have been reset to 0 while preserving registered teams and accounts.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Database Tools - Reset Database
 app.post('/api/reset', async (req, res) => {
   try {

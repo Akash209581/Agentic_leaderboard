@@ -811,6 +811,22 @@ switch ($route) {
         }
         break;
 
+    case 'reset-points':
+        if ($method === 'POST') {
+            try {
+                $pdo->exec("UPDATE teams SET points = 0");
+                $pdo->exec("UPDATE visitors SET points = 0");
+                $pdo->exec("UPDATE faculty SET points = 0");
+                $pdo->exec("DELETE FROM scans");
+
+                echo json_encode(["success" => true, "message" => "All points and scan records reset to 0. Accounts and teams preserved."]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(["error" => $e->getMessage()]);
+            }
+        }
+        break;
+
     case 'reset':
         if ($method === 'POST') {
             try {

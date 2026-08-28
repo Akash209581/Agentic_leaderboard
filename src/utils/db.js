@@ -183,7 +183,17 @@ export const seedMockData = async () => {
   return data;
 };
 
-// Reset Database
+// Reset Points Only (Admin - Preserves registered teams, members, visitors, and faculty)
+export const resetPointsOnly = async () => {
+  const data = await safeFetch('/api/reset-points', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  window.dispatchEvent(new Event('local-db-update'));
+  return data;
+};
+
+// Reset Entire Database
 export const clearDatabase = async () => {
   const data = await safeFetch('/api/reset', {
     method: 'POST',
