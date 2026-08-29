@@ -164,18 +164,23 @@ switch ($route) {
     case 'data':
         if ($method === 'GET') {
             try {
-                // Exclude leader_photo from bulk response - each base64 photo is 2MB+
-                $teams = $pdo->query("SELECT id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, unique_code FROM teams")->fetchAll();
+                $teams = $pdo->query("SELECT id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, unique_code, leader_photo FROM teams")->fetchAll();
                 $visitors = $pdo->query("SELECT * FROM visitors")->fetchAll();
                 $faculty = $pdo->query("SELECT * FROM faculty")->fetchAll();
                 $scans = $pdo->query("SELECT * FROM scans ORDER BY timestamp DESC")->fetchAll();
                 $events = $pdo->query("SELECT * FROM events ORDER BY created_at ASC")->fetchAll();
                 $pointsActive = isPointsSystemActive($pdo);
                 
-                // Decode team members list
+                // Decode team members list and format properties
                 foreach ($teams as &$t) {
                     $t['members'] = json_decode($t['members'] ?? '[]', true);
-                    $t['leader_photo'] = null; // Loaded separately via team-photo route
+                    $t['leaderName'] = $t['leader_name'];
+                    $t['leaderRegNo'] = $t['leader_reg_no'];
+                    $t['memberCount'] = (int)($t['member_count'] ?? 0);
+                    $t['points'] = (int)($t['points'] ?? 0);
+                    $t['registeredAt'] = (int)($t['registered_at'] ?? 0);
+                    $t['uniqueCode'] = $t['unique_code'] ?? null;
+                    $t['leaderPhoto'] = $t['leader_photo'] ?? null;
                 }
                 
                 echo json_encode([
