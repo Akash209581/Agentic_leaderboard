@@ -33,10 +33,27 @@ export default function App() {
     };
   }, []);
 
-  const isFullScreenLeaderboard = typeof window !== 'undefined' && window.location.search.includes('view=leaderboard');
+  const isFullScreenLeaderboard = typeof window !== 'undefined' && (
+    window.location.search.includes('view=leaderboard') || 
+    window.location.search.includes('view=tv')
+  );
 
   if (isFullScreenLeaderboard) {
-    return <FullScreenLeaderboard teams={teams} visitors={visitors} faculty={faculty} scans={scans} events={events} pointsActive={pointsActive} />;
+    return (
+      <FullScreenLeaderboard 
+        teams={teams} 
+        visitors={visitors} 
+        faculty={faculty} 
+        scans={scans} 
+        events={events} 
+        pointsActive={pointsActive}
+        onExit={() => {
+          const newUrl = window.location.pathname || '/';
+          window.history.pushState({}, '', newUrl);
+          window.location.reload();
+        }}
+      />
+    );
   }
 
   // If directly accessing /Keerthimamisadmin

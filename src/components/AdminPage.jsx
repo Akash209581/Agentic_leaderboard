@@ -1,9 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { seedMockData, clearDatabase, addEvent, deleteEvent } from '../utils/db';
+import FullScreenLeaderboard from './FullScreenLeaderboard';
 
 export default function AdminPage({ teams, visitors, faculty, scans, events = [], pointsActive = true }) {
   // Event Management Input State
   const [newEventName, setNewEventName] = useState('');
+  const [isTvViewOpen, setIsTvViewOpen] = useState(false);
+
+  // Sync fullscreen change with state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setIsTvViewOpen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const handleEnterTvView = () => {
+    setIsTvViewOpen(true);
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  };
+
+  const handleExitTvView = () => {
+    setIsTvViewOpen(false);
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   // Sort teams by points (highest first) and then by registration time
   const sortedTeams = [...teams].sort((a, b) => {
@@ -286,6 +315,20 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
     );
   };
 
+  if (isTvViewOpen) {
+    return (
+      <FullScreenLeaderboard 
+        teams={teams}
+        visitors={visitors}
+        faculty={faculty}
+        scans={scans}
+        events={events}
+        pointsActive={pointsActive}
+        onExit={handleExitTvView}
+      />
+    );
+  }
+
   return (
     <div className="admin-dashboard fade-in">
       <div className="analytics-hero-header glass-panel">
@@ -309,6 +352,18 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
           </div>
           <h2>Analytics & Standings Arena</h2>
           <p>Real-time telemetry, participant stats, and live scoreboard updates for Agentic AI Day.</p>
+        </div>
+        
+        <div className="hero-header-actions">
+          <button 
+            onClick={handleEnterTvView}
+            className="tv-view-launch-btn"
+            title="Launch Full Screen TV Arena Scoreboard"
+          >
+            <span className="tv-btn-spark">⚡</span>
+            <span className="tv-btn-icon">📺</span>
+            <span className="tv-btn-label">TV View (Full Screen)</span>
+          </button>
         </div>
       </div>
 
@@ -372,8 +427,15 @@ export default function AdminPage({ teams, visitors, faculty, scans, events = []
 
       {/* 2x2 Leaderboards Grid */}
       <div className="leaderboard-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
           <h3 style={{ margin: 0 }}>🏆 Live Standings (Scoreboards)</h3>
+          <button 
+            onClick={handleEnterTvView}
+            className="tv-view-btn-secondary"
+            title="Launch Full Screen TV Mode"
+          >
+            <span>📺 Open TV View</span>
+          </button>
         </div>
         <div className="leaderboards-2x2-grid">
           {boxSlots.map((slot, idx) => renderLeaderboardBox(slot, idx))}
