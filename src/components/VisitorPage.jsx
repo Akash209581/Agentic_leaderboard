@@ -105,6 +105,15 @@ export default function VisitorPage({ teams, visitors, faculty, scans, pointsAct
     };
   }, [cameraActive]);
 
+  // Fast polling while waiting for team approval so points update instantly
+  useEffect(() => {
+    if (!scanPendingRecord) return;
+    const interval = setInterval(() => {
+      window.dispatchEvent(new Event('local-db-update'));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [scanPendingRecord]);
+
   // Sync scan pending validation
   useEffect(() => {
     if (scanPendingRecord) {

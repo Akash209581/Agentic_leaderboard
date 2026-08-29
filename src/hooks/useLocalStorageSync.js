@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { getApiUrl } from '../utils/db';
 
 // Polling intervals (ms)
-const POLL_INTERVAL_ACTIVE = 30000;  // 30s when tab is visible
-const POLL_INTERVAL_HIDDEN = 120000; // 2min when tab is in background
+const POLL_INTERVAL_ACTIVE = 2500;  // 2.5s for fast real-time synchronization across devices
+const POLL_INTERVAL_HIDDEN = 10000; // 10s when tab is in background
 
 export const useLocalStorageSync = () => {
   const [teams, setTeams] = useState([]);

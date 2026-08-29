@@ -42,6 +42,15 @@ export default function StudentPage({ teams, scans, events = [], pointsActive = 
     setOptimisticBonus(0);
   }, [currentTeam?.points]);
 
+  // Fast polling while logged in so pending scans and verification modals appear instantly
+  useEffect(() => {
+    if (!currentTeamId) return;
+    const interval = setInterval(() => {
+      window.dispatchEvent(new Event('local-db-update'));
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [currentTeamId]);
+
   // Forgot Password State
   const [fpTeamName, setFpTeamName] = useState('');
   const [fpLeaderName, setFpLeaderName] = useState('');
