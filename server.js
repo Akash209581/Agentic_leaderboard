@@ -483,8 +483,24 @@ app.post('/api/register-team', async (req, res) => {
       return res.status(400).json({ error: 'A team leader with this registration number is already registered.' });
     }
 
-    const countRes = await dbGet('SELECT COUNT(*) as count FROM teams');
-    const teamId = `T-${1000 + parseInt(countRes.count || 0, 10) + 1}`;
+    const existingTeams = await dbAll('SELECT id FROM teams');
+    let maxTeamNum = 1000;
+    const existingTeamIds = new Set();
+    for (const t of existingTeams) {
+      if (t.id) {
+        existingTeamIds.add(t.id);
+        const match = t.id.match(/^T-(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxTeamNum) maxTeamNum = num;
+        }
+      }
+    }
+    let nextTeamNum = maxTeamNum + 1;
+    while (existingTeamIds.has(`T-${nextTeamNum}`)) {
+      nextTeamNum++;
+    }
+    const teamId = `T-${nextTeamNum}`;
     const timestamp = Date.now();
     const membersList = members || [];
     
@@ -586,8 +602,24 @@ app.post('/api/register-visitor', async (req, res) => {
       return res.status(400).json({ error: 'This mobile number is already registered.' });
     }
 
-    const countRes = await dbGet('SELECT COUNT(*) as count FROM visitors');
-    const visitorId = `V-${2000 + parseInt(countRes.count || 0, 10) + 1}`;
+    const existingVisitors = await dbAll('SELECT id FROM visitors');
+    let maxVisitorNum = 2000;
+    const existingVisitorIds = new Set();
+    for (const v of existingVisitors) {
+      if (v.id) {
+        existingVisitorIds.add(v.id);
+        const match = v.id.match(/^V-(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxVisitorNum) maxVisitorNum = num;
+        }
+      }
+    }
+    let nextVisitorNum = maxVisitorNum + 1;
+    while (existingVisitorIds.has(`V-${nextVisitorNum}`)) {
+      nextVisitorNum++;
+    }
+    const visitorId = `V-${nextVisitorNum}`;
     const timestamp = Date.now();
 
     await dbRun(

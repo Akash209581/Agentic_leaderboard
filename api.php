@@ -347,8 +347,20 @@ switch ($route) {
                     exit();
                 }
 
-                $count = $pdo->query("SELECT COUNT(*) as count FROM teams")->fetch()['count'];
-                $teamId = "T-" . (1000 + $count + 1);
+                $teamRows = $pdo->query("SELECT id FROM teams")->fetchAll(PDO::FETCH_COLUMN);
+                $maxTeamNum = 1000;
+                $existingTeamIds = array_flip($teamRows ?: []);
+                foreach ($teamRows as $tid) {
+                    if (preg_match('/^T-(\d+)$/', $tid, $m)) {
+                        $num = (int)$m[1];
+                        if ($num > $maxTeamNum) $maxTeamNum = $num;
+                    }
+                }
+                $nextTeamNum = $maxTeamNum + 1;
+                while (isset($existingTeamIds["T-$nextTeamNum"])) {
+                    $nextTeamNum++;
+                }
+                $teamId = "T-$nextTeamNum";
                 $timestamp = round(microtime(true) * 1000);
 
                 $stmt = $pdo->prepare("INSERT INTO teams (id, name, leader_name, leader_reg_no, member_count, members, points, registered_at, event, leader_photo) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)");
@@ -434,8 +446,20 @@ switch ($route) {
                     exit();
                 }
 
-                $count = $pdo->query("SELECT COUNT(*) as count FROM visitors")->fetch()['count'];
-                $visitorId = "V-" . (2000 + $count + 1);
+                $visitorRows = $pdo->query("SELECT id FROM visitors")->fetchAll(PDO::FETCH_COLUMN);
+                $maxVisitorNum = 2000;
+                $existingVisitorIds = array_flip($visitorRows ?: []);
+                foreach ($visitorRows as $vid) {
+                    if (preg_match('/^V-(\d+)$/', $vid, $m)) {
+                        $num = (int)$m[1];
+                        if ($num > $maxVisitorNum) $maxVisitorNum = $num;
+                    }
+                }
+                $nextVisitorNum = $maxVisitorNum + 1;
+                while (isset($existingVisitorIds["V-$nextVisitorNum"])) {
+                    $nextVisitorNum++;
+                }
+                $visitorId = "V-$nextVisitorNum";
                 $timestamp = round(microtime(true) * 1000);
 
                 $stmt = $pdo->prepare("INSERT INTO visitors (id, name, mobile, password, points, registered_at) VALUES (?, ?, ?, ?, 0, ?)");
